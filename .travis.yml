@@ -1,0 +1,55 @@
+language: julia
+os:
+  - linux
+julia:
+  - 0.6
+notifications:
+  email: false
+git:
+  depth: 99999999
+cache:
+  timeout: 1000
+  directories:
+    - downloads
+env:
+  global:
+    - BINARYBUILDER_DOWNLOADS_CACHE=downloads
+    - BINARYBUILDER_AUTOMATIC_APPLE=true
+  # Our build takes too long for one job, so split targets across multiple jobs
+  matrix:
+    - TARGET=x86_64-linux-gnu
+    - TARGET=i686-linux-gnu
+    - TARGET=aarch64-linux-gnu
+    - TARGET=arm-linux-gnueabihf
+    - TARGET=powerpc64le-linux-gnu
+    - TARGET=x86_64-apple-darwin14
+    - TARGET=x86_64-w64-mingw32
+    - TARGET=i686-w64-mingw32
+sudo: required
+
+jobs:
+  include:
+    - stage: regenerate build.jl
+      script: julia --color=yes build_tarballs.jl --only-buildjl
+      if: tag IS present
+
+# Before anything else, get the latest versions of things
+before_script:
+  - julia -e 'Pkg.clone("https://github.com/JuliaPackaging/BinaryProvider.jl")'
+  - julia -e 'Pkg.clone("https://github.com/JuliaPackaging/BinaryBuilder.jl"); Pkg.build()'
+
+script:
+  - julia build_tarballs.jl $TARGET
+
+deploy:
+  provider: releases
+  api_key:
+    # Note; this api_key is only valid for staticfloat/LLVMBuilder; you need
+    # to make your own: https://docs.travis-ci.com/user/deployment/releases/
+    secure: 
+  file_glob: true
+  file: products/*
+  skip_cleanup: true
+  on:
+    repo: staticfloat/LLVMBuilder
+    tags: true
