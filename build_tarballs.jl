@@ -9,8 +9,8 @@ sources = [
     "e07d6dd8d9ef196cfc8e8bb131cbd6a2ed0b1caf1715f9d05b0f0eeaddb6df32",
     "http://releases.llvm.org/$(llvm_ver)/compiler-rt-$(llvm_ver).src.tar.xz" =>
     "d0cc1342cf57e9a8d52f5498da47a3b28d24ac0d39cbc92308781b3ee0cea79a",
-    "http://releases.llvm.org/$(llvm_ver)/lldb-$(llvm_ver).src.tar.xz" =>
-    "46f54c1d7adcd047d87c0179f7b6fa751614f339f4f87e60abceaa45f414d454",
+    #"http://releases.llvm.org/$(llvm_ver)/lldb-$(llvm_ver).src.tar.xz" =>
+    #"46f54c1d7adcd047d87c0179f7b6fa751614f339f4f87e60abceaa45f414d454",
     "http://releases.llvm.org/$(llvm_ver)/libcxx-$(llvm_ver).src.tar.xz" =>
     "70931a87bde9d358af6cb7869e7535ec6b015f7e6df64def6d2ecdd954040dd9",
     "http://releases.llvm.org/$(llvm_ver)/libcxxabi-$(llvm_ver).src.tar.xz" =>
@@ -90,7 +90,7 @@ for f in *.src; do
         continue
     fi
 
-    ln -sf llvm-*.src/projects/${f%-*} ${f}
+    ln -sf $(pwd)/${f} $(echo llvm-*.src)/projects/${f%-*}
 done
 
 # Next, boogie on down to llvm town
@@ -111,18 +111,24 @@ mkdir build && cd build
 CMAKE_FLAGS="-DLLVM_TARGETS_TO_BUILD:STRING=host;NVPTX;AMDGPU"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_BUILD_TYPE=Release"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_BINDINGS_LIST="
+
+# Disable useless things like docs, terminfo, etc....
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_INCLUDE_DOCS=Off"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_ENABLE_TERMINFO=Off"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DHAVE_HISTEDIT_H=Off"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DHAVE_LIBEDIT=Off"
+
+
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_BUILD_LLVM_DYLIB:BOOL=ON"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_LINK_LLVM_DYLIB:BOOL=ON"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_INSTALL_PREFIX=$prefix"
-CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOLS_INSTALL_DIR=tools"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_FLAGS=-std=c++0x"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CROSSCOMPILING=True"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXXABI_LIBCXX_PATH=$(echo ${WORKSPACE}/srcdir/libcxx-*.src)"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXXABI_LIBCXX_INCLUDES=$(echo ${WORKSPACE}/srcdir/libcxx-*.src/include)"
+
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TABLEGEN=${WORKSPACE}/srcdir/bin/llvm-tblgen"
-CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_TOOLCHAIN_FILE=/opt/\$target/\$target.toolchain"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_TOOLCHAIN_FILE=/opt/$target/$target.toolchain"
 
 # Build!
 cmake .. ${CMAKE_FLAGS}
