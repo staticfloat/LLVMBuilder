@@ -56,16 +56,18 @@ done
 # -mmacosx-version-min=10.8, which obviously won't work here.
 unset LDFLAGS
 
-# Build llvm-tblgen
+# Build tblgen
 mkdir build && cd build
 CMAKE_FLAGS="-DLLVM_TARGETS_TO_BUILD:STRING=host"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_FLAGS=-std=c++0x"
 cmake .. ${CMAKE_FLAGS}
-make -j${nproc} llvm-tblgen
+make -j${nproc} llvm-tblgen clang-tblgen
 
-# Copy llvm-tblgen into our destination `bin` folder:
+
+# Copy tblgen into our destination `bin` folder:
 mkdir -p $prefix/bin
 mv bin/llvm-tblgen $prefix/bin/
+mv bin/clang-tblgen $prefix/bin/
 """
 
 # We'll do this build for x86_64-linux-gnu only, as that's the arch we're building on
@@ -73,9 +75,10 @@ platforms = [
     Linux(:x86_64),
 ]
 
-# We only care about llvm-tblgen
+# We only care about llvm-tblgen and clang-tblgen
 products(prefix) = [
-    ExecutableProduct(prefix, "llvm-tblgen", :tblgen)
+    ExecutableProduct(prefix, "llvm-tblgen",  :llvm_tblgen)
+    ExecutableProduct(prefix, "clang-tblgen", :clang_tblgen)
 ]
 
 # Dependencies that must be installed before this package can be built
@@ -151,6 +154,7 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXXABI_LIBCXX_PATH=$(echo ${WORKSPACE}/srcdir/l
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXXABI_LIBCXX_INCLUDES=$(echo ${WORKSPACE}/srcdir/libcxx-*.src/include)"
 
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TABLEGEN=${WORKSPACE}/srcdir/bin/llvm-tblgen"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DCLANG_TABLEGEN=${WORKSPACE}/srcdir/bin/clang-tblgen"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_TOOLCHAIN_FILE=/opt/$target/$target.toolchain"
 
 # Build!
