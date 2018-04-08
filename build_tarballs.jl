@@ -27,6 +27,23 @@ sources = [
 # build the tools natively ourselves, directly.  :/
 script = raw"""
 cd $WORKSPACE/srcdir/
+
+# First, symlink our other projects into llvm/projects
+for f in *.src; do
+    # Don't symlink llvm itself into llvm/projects...
+    if [[ ${f} == llvm-*.src ]]; then
+        continue
+    fi
+
+    # clang lives in tools/clang and not projects/cfe
+    if [[ ${f} == cfe-*.src ]]; then
+        ln -sf $(pwd)/${f} $(echo llvm-*.src)/tools/clang
+        continue
+    fi
+
+    ln -sf $(pwd)/${f} $(echo llvm-*.src)/projects/${f%-*}
+done
+
 cd llvm-*.src
 
 # Update configure scripts and apply our patches
@@ -87,6 +104,12 @@ cd $WORKSPACE/srcdir/
 for f in *.src; do
     # Don't symlink llvm itself into llvm/projects...
     if [[ ${f} == llvm-*.src ]]; then
+        continue
+    fi
+
+    # clang lives in tools/clang and not projects/cfe
+    if [[ ${f} == cfe-*.src ]]; then
+        ln -sf $(pwd)/${f} $(echo llvm-*.src)/tools/clang
         continue
     fi
 
