@@ -11,12 +11,12 @@ sources = [
     "d0cc1342cf57e9a8d52f5498da47a3b28d24ac0d39cbc92308781b3ee0cea79a",
     #"http://releases.llvm.org/$(llvm_ver)/lldb-$(llvm_ver).src.tar.xz" =>
     #"46f54c1d7adcd047d87c0179f7b6fa751614f339f4f87e60abceaa45f414d454",
-    "http://releases.llvm.org/$(llvm_ver)/libcxx-$(llvm_ver).src.tar.xz" =>
-    "70931a87bde9d358af6cb7869e7535ec6b015f7e6df64def6d2ecdd954040dd9",
-    "http://releases.llvm.org/$(llvm_ver)/libcxxabi-$(llvm_ver).src.tar.xz" =>
-    "91c6d9c5426306ce28d0627d6a4448e7d164d6a3f64b01cb1d196003b16d641b",
-    "http://releases.llvm.org/$(llvm_ver)/polly-$(llvm_ver).src.tar.xz" =>
-    "47e493a799dca35bc68ca2ceaeed27c5ca09b12241f87f7220b5f5882194f59c",
+    #"http://releases.llvm.org/$(llvm_ver)/libcxx-$(llvm_ver).src.tar.xz" =>
+    #"70931a87bde9d358af6cb7869e7535ec6b015f7e6df64def6d2ecdd954040dd9",
+    #"http://releases.llvm.org/$(llvm_ver)/libcxxabi-$(llvm_ver).src.tar.xz" =>
+    #"91c6d9c5426306ce28d0627d6a4448e7d164d6a3f64b01cb1d196003b16d641b",
+    #"http://releases.llvm.org/$(llvm_ver)/polly-$(llvm_ver).src.tar.xz" =>
+    #"47e493a799dca35bc68ca2ceaeed27c5ca09b12241f87f7220b5f5882194f59c",
 
     # Include our LLVM patches
     "patches",
@@ -27,6 +27,23 @@ sources = [
 # build the tools natively ourselves, directly.  :/
 script = raw"""
 cd $WORKSPACE/srcdir/
+
+# First, symlink our other projects into llvm/projects
+for f in *.src; do
+    # Don't symlink llvm itself into llvm/projects...
+    if [[ ${f} == llvm-*.src ]]; then
+        continue
+    fi
+
+    # clang lives in tools/clang and not projects/cfe
+    if [[ ${f} == cfe-*.src ]]; then
+        ln -sf $(pwd)/${f} $(echo llvm-*.src)/tools/clang
+        continue
+    fi
+
+    ln -sf $(pwd)/${f} $(echo llvm-*.src)/projects/${f%-*}
+done
+
 cd llvm-*.src
 
 # Update configure scripts and apply our patches
@@ -39,16 +56,18 @@ done
 # -mmacosx-version-min=10.8, which obviously won't work here.
 unset LDFLAGS
 
-# Build llvm-tblgen
+# Build tblgen
 mkdir build && cd build
 CMAKE_FLAGS="-DLLVM_TARGETS_TO_BUILD:STRING=host"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_FLAGS=-std=c++0x"
 cmake .. ${CMAKE_FLAGS}
-make -j${nproc} llvm-tblgen
+make -j${nproc} llvm-tblgen clang-tblgen
 
-# Copy llvm-tblgen into our destination `bin` folder:
+
+# Copy tblgen into our destination `bin` folder:
 mkdir -p $prefix/bin
 mv bin/llvm-tblgen $prefix/bin/
+mv bin/clang-tblgen $prefix/bin/
 """
 
 # We'll do this build for x86_64-linux-gnu only, as that's the arch we're building on
@@ -56,9 +75,10 @@ platforms = [
     Linux(:x86_64),
 ]
 
-# We only care about llvm-tblgen
+# We only care about llvm-tblgen and clang-tblgen
 products(prefix) = [
-    ExecutableProduct(prefix, "llvm-tblgen", :tblgen)
+    ExecutableProduct(prefix, "llvm-tblgen",  :llvm_tblgen)
+    ExecutableProduct(prefix, "clang-tblgen", :clang_tblgen)
 ]
 
 # Dependencies that must be installed before this package can be built
@@ -87,6 +107,12 @@ cd $WORKSPACE/srcdir/
 for f in *.src; do
     # Don't symlink llvm itself into llvm/projects...
     if [[ ${f} == llvm-*.src ]]; then
+        continue
+    fi
+
+    # clang lives in tools/clang and not projects/cfe
+    if [[ ${f} == cfe-*.src ]]; then
+        ln -sf $(pwd)/${f} $(echo llvm-*.src)/tools/clang
         continue
     fi
 
@@ -128,6 +154,7 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXXABI_LIBCXX_PATH=$(echo ${WORKSPACE}/srcdir/l
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXXABI_LIBCXX_INCLUDES=$(echo ${WORKSPACE}/srcdir/libcxx-*.src/include)"
 
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TABLEGEN=${WORKSPACE}/srcdir/bin/llvm-tblgen"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DCLANG_TABLEGEN=${WORKSPACE}/srcdir/bin/clang-tblgen"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_TOOLCHAIN_FILE=/opt/$target/$target.toolchain"
 
 # Build!
