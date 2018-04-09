@@ -27,9 +27,19 @@ sources = [
 # build the tools natively ourselves, directly.  :/
 script = raw"""
 cd $WORKSPACE/srcdir/
-cd llvm-*.src
+
+# First, symlink our other projects into llvm/projects
+for f in *.src; do
+    # Don't symlink llvm itself into llvm/projects...
+    if [[ ${f} == llvm-*.src ]]; then
+        continue
+    fi
+
+    ln -sf $(pwd)/${f} $(echo llvm-*.src)/projects/${f%-*}
+done
 
 # Update configure scripts and apply our patches
+cd llvm-*.src
 update_configure_scripts
 for f in $WORKSPACE/srcdir/llvm_patches/*.patch; do
     patch -p1 < ${f}
@@ -39,16 +49,17 @@ done
 # -mmacosx-version-min=10.8, which obviously won't work here.
 unset LDFLAGS
 
-# Build llvm-tblgen
+# Build llvm-tblgen and clang-tblgen
 mkdir build && cd build
 CMAKE_FLAGS="-DLLVM_TARGETS_TO_BUILD:STRING=host"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_FLAGS=-std=c++0x"
 cmake .. ${CMAKE_FLAGS}
-make -j${nproc} llvm-tblgen
+make -j${nproc} llvm-tblgen clang-tblgen
 
-# Copy llvm-tblgen into our destination `bin` folder:
+# Copy the tblgens into our destination `bin` folder:
 mkdir -p $prefix/bin
 mv bin/llvm-tblgen $prefix/bin/
+mv bin/clang-tblgen $prefix/bin/
 """
 
 # We'll do this build for x86_64-linux-gnu only, as that's the arch we're building on
@@ -58,7 +69,8 @@ platforms = [
 
 # We only care about llvm-tblgen
 products(prefix) = [
-    ExecutableProduct(prefix, "llvm-tblgen", :tblgen)
+    ExecutableProduct(prefix, "llvm-tblgen", :llvm_tblgen)
+    ExecutableProduct(prefix, "clang-tblgen", :clang_tblgen)
 ]
 
 # Dependencies that must be installed before this package can be built
@@ -124,10 +136,17 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_LINK_LLVM_DYLIB:BOOL=ON"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_INSTALL_PREFIX=$prefix"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_FLAGS=-std=c++0x"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CROSSCOMPILING=True"
+
+# We have to explicitly add libstdc++ here for some weird reason, otherwise we get errors
+# like these: https://stackoverflow.com/questions/46687323/linker-errors-building-libcxx-on-fresh-ubuntu-install
+if [[ "${target}" != *-darwin* ]]; then
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXX_CXX_ABI=libstdc++"
+fi
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXXABI_LIBCXX_PATH=$(echo ${WORKSPACE}/srcdir/libcxx-*.src)"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXXABI_LIBCXX_INCLUDES=$(echo ${WORKSPACE}/srcdir/libcxx-*.src/include)"
 
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TABLEGEN=${WORKSPACE}/srcdir/bin/llvm-tblgen"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DCLANG_TABLEGEN=${WORKSPACE}/srcdir/bin/clang-tblgen"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_TOOLCHAIN_FILE=/opt/$target/$target.toolchain"
 
 # Build!
