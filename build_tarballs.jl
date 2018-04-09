@@ -22,10 +22,8 @@ sources = [
     "patches",
 ]
 
-# The very first thing we need to do is to build llvm-tblgen for x86_64-linux-gnu
-# This is because LLVM's cross-compile setup is kind of borked, so we just
-# build the tools natively ourselves, directly.  :/
-script = raw"""
+# Since we kind of do this LLVM setup twice, this is the shared setup start:
+script_setup = raw"""
 cd $WORKSPACE/srcdir/
 
 # First, symlink our other projects into llvm/projects
@@ -35,20 +33,30 @@ for f in *.src; do
         continue
     fi
 
-    ln -sf $(pwd)/${f} $(echo llvm-*.src)/projects/${f%-*}
+    # clang lives in tools/clang and not projects/cfe
+    if [[ ${f} == cfe-*.src ]]; then
+        ln -sf $(pwd)/${f} $(echo llvm-*.src)/tools/clang
+    else
+        ln -sf $(pwd)/${f} $(echo llvm-*.src)/projects/${f%-*}
+    fi
 done
 
-# Update configure scripts and apply our patches
+# Next, boogie on down to llvm town
 cd llvm-*.src
+
+# Update config.guess/config.sub stuff
 update_configure_scripts
+
+# Apply all our patches
 for f in $WORKSPACE/srcdir/llvm_patches/*.patch; do
     patch -p1 < ${f}
 done
+"""
 
-# Wipe out LDFLAGS because on OSX, BinaryBuilder adds in
-# -mmacosx-version-min=10.8, which obviously won't work here.
-unset LDFLAGS
-
+# The very first thing we need to do is to build llvm-tblgen for x86_64-linux-gnu
+# This is because LLVM's cross-compile setup is kind of borked, so we just
+# build the tools natively ourselves, directly.  :/
+script = script_setup * raw"""
 # Build llvm-tblgen and clang-tblgen
 mkdir build && cd build
 CMAKE_FLAGS="-DLLVM_TARGETS_TO_BUILD:STRING=host"
@@ -92,30 +100,7 @@ tblgen_tarball = joinpath("products", tblgen_tarball)
 push!(sources, tblgen_tarball => tblgen_hash)
 
 # Next, we will Bash recipe for building across all platforms
-script = raw"""
-cd $WORKSPACE/srcdir/
-
-# First, symlink our other projects into llvm/projects
-for f in *.src; do
-    # Don't symlink llvm itself into llvm/projects...
-    if [[ ${f} == llvm-*.src ]]; then
-        continue
-    fi
-
-    ln -sf $(pwd)/${f} $(echo llvm-*.src)/projects/${f%-*}
-done
-
-# Next, boogie on down to llvm town
-cd llvm-*.src
-
-# Update config.guess/config.sub stuff
-update_configure_scripts
-
-# Apply all our patches
-for f in $WORKSPACE/srcdir/llvm_patches/*.patch; do
-    patch -p1 < ${f}
-done
-
+script = script_setup * raw"""
 # Let's do the actual build within the `build` subdirectory
 mkdir build && cd build
 
@@ -134,8 +119,15 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DHAVE_LIBEDIT=Off"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_BUILD_LLVM_DYLIB:BOOL=ON"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_LINK_LLVM_DYLIB:BOOL=ON"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_INSTALL_PREFIX=$prefix"
-CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_FLAGS=-std=c++0x"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CROSSCOMPILING=True"
+
+# When compiling for 32-bit arm, we need to be a little particular about which CPU features
+# we support, since it will usually automagically decide to use NEON
+if [[ "${target}" == arm*hf ]]; then
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_FLAGS=\"-std=c++0x -march=armv7-a -mfloat-abi=hard\""
+else
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_FLAGS=\"-std=c++0x\""
+fi
 
 # We have to explicitly add libstdc++ here for some weird reason, otherwise we get errors
 # like these: https://stackoverflow.com/questions/46687323/linker-errors-building-libcxx-on-fresh-ubuntu-install
