@@ -17,6 +17,8 @@ sources = [
     "91c6d9c5426306ce28d0627d6a4448e7d164d6a3f64b01cb1d196003b16d641b",
     "http://releases.llvm.org/$(llvm_ver)/polly-$(llvm_ver).src.tar.xz" =>
     "47e493a799dca35bc68ca2ceaeed27c5ca09b12241f87f7220b5f5882194f59c",
+    "http://releases.llvm.org/$(llvm_ver)/libunwind-$(llvm_ver).src.tar.xz" =>
+    "256c4ed971191bde42208386c8d39e5143fa4afd098e03bd2c140c878c63f1d6",
 
     # Include our LLVM patches
     "patches",
@@ -26,7 +28,7 @@ sources = [
 script_setup = raw"""
 cd $WORKSPACE/srcdir/
 
-# First, symlink our other projects into llvm/projects
+# First, move our other projects into llvm/projects
 for f in *.src; do
     # Don't symlink llvm itself into llvm/projects...
     if [[ ${f} == llvm-*.src ]]; then
@@ -35,9 +37,9 @@ for f in *.src; do
 
     # clang lives in tools/clang and not projects/cfe
     if [[ ${f} == cfe-*.src ]]; then
-        ln -sf $(pwd)/${f} $(echo llvm-*.src)/tools/clang
+        mv $(pwd)/${f} $(echo llvm-*.src)/tools/clang
     else
-        ln -sf $(pwd)/${f} $(echo llvm-*.src)/projects/${f%-*}
+        mv $(pwd)/${f} $(echo llvm-*.src)/projects/${f%-*}
     fi
 done
 
@@ -75,7 +77,7 @@ platforms = [
     Linux(:x86_64),
 ]
 
-# We only care about llvm-tblgen
+# We only care about llvm-tblgen and clang-tblgen
 products(prefix) = [
     ExecutableProduct(prefix, "llvm-tblgen", :llvm_tblgen)
     ExecutableProduct(prefix, "clang-tblgen", :clang_tblgen)
@@ -101,13 +103,16 @@ push!(sources, tblgen_tarball => tblgen_hash)
 
 # Next, we will Bash recipe for building across all platforms
 script = script_setup * raw"""
+# This value is really useful later
+LLVM_DIR=$(pwd)
+
 # Let's do the actual build within the `build` subdirectory
 mkdir build && cd build
 
 # These are the CMAKE flags we're going to build with:
-CMAKE_FLAGS="-DLLVM_TARGETS_TO_BUILD:STRING=host;NVPTX;AMDGPU"
+CMAKE_FLAGS="-DLLVM_TARGETS_TO_BUILD:STRING=\"host;NVPTX;AMDGPU\""
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_BUILD_TYPE=Release"
-CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_BINDINGS_LIST="
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_BINDINGS_LIST=\"\" "
 
 # Disable useless things like docs, terminfo, etc....
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_INCLUDE_DOCS=Off"
@@ -115,31 +120,27 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_ENABLE_TERMINFO=Off"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DHAVE_HISTEDIT_H=Off"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DHAVE_LIBEDIT=Off"
 
-
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_BUILD_LLVM_DYLIB:BOOL=ON"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_LINK_LLVM_DYLIB:BOOL=ON"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_INSTALL_PREFIX=$prefix"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CROSSCOMPILING=True"
 
-# When compiling for 32-bit arm, we need to be a little particular about which CPU features
-# we support, since it will usually automagically decide to use NEON
-if [[ "${target}" == arm*hf ]]; then
-    CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_FLAGS=\"-std=c++0x -march=armv7-a -mfloat-abi=hard\""
-else
-    CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_FLAGS=\"-std=c++0x\""
-fi
-
-# We have to explicitly add libstdc++ here for some weird reason, otherwise we get errors
-# like these: https://stackoverflow.com/questions/46687323/linker-errors-building-libcxx-on-fresh-ubuntu-install
-if [[ "${target}" != *-darwin* ]]; then
-    CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXX_CXX_ABI=libstdc++"
-fi
-CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXXABI_LIBCXX_PATH=$(echo ${WORKSPACE}/srcdir/libcxx-*.src)"
-CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXXABI_LIBCXX_INCLUDES=$(echo ${WORKSPACE}/srcdir/libcxx-*.src/include)"
+# Tell cxxabi to use the LLVM unwinder
+#CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXXABI_USE_LLVM_UNWINDER=On"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_FLAGS=\"-std=c++0x\""
 
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TABLEGEN=${WORKSPACE}/srcdir/bin/llvm-tblgen"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCLANG_TABLEGEN=${WORKSPACE}/srcdir/bin/clang-tblgen"
-CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_TOOLCHAIN_FILE=/opt/$target/$target.toolchain"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_TOOLCHAIN_FILE=/opt/${target}/${target}.toolchain"
+
+# On OSX, we need to override LLVM's looking around for our SDK
+if [[ "${target}" == *-apple-* ]]; then
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DDARWIN_macosx_CACHED_SYSROOT:STRING=/opt/${target}/MacOSX10.10.sdk"
+
+    # LLVM actually won't build against 10.8, so we bump ourselves up slightly to 10.9
+    export MACOSX_DEPLOYMENT_TARGET=10.9
+    export LDFLAGS=-mmacosx-version-min=10.9
+fi
 
 # Build!
 cmake .. ${CMAKE_FLAGS}
