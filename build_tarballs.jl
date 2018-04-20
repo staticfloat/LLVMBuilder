@@ -133,13 +133,18 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TABLEGEN=${WORKSPACE}/srcdir/bin/llvm-tblgen"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCLANG_TABLEGEN=${WORKSPACE}/srcdir/bin/clang-tblgen"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_TOOLCHAIN_FILE=/opt/${target}/${target}.toolchain"
 
-# On OSX, we need to override LLVM's looking around for our SDK
-if [[ "${target}" == *-apple-* ]]; then
+if [[ "${target}" == *apple* ]]; then
+    # On OSX, we need to override LLVM's looking around for our SDK
     CMAKE_FLAGS="${CMAKE_FLAGS} -DDARWIN_macosx_CACHED_SYSROOT:STRING=/opt/${target}/MacOSX10.10.sdk"
 
     # LLVM actually won't build against 10.8, so we bump ourselves up slightly to 10.9
     export MACOSX_DEPLOYMENT_TARGET=10.9
     export LDFLAGS=-mmacosx-version-min=10.9
+fi
+
+if [[ "${target}" == *apple* ]] || [[ "${target}" == *freebsd* ]]; then
+    # On clang-based platforms we need to override the check for ffs because it doesn't work with `clang`.
+    export ac_cv_have_decl___builtin_ffs=yes
 fi
 
 # Build!
