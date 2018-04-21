@@ -109,6 +109,12 @@ LLVM_DIR=$(pwd)
 # Let's do the actual build within the `build` subdirectory
 mkdir build && cd build
 
+# Accumulate these flags outside CMAKE_FLAGS,
+# they will be added at the end.
+CMAKE_CPP_FLAGS=""
+CMAKE_CXX_FLAGS=""
+CMAKE_C_FLAGS=""
+
 # These are the CMAKE flags we're going to build with:
 CMAKE_FLAGS="-DLLVM_TARGETS_TO_BUILD:STRING=\"host;NVPTX;AMDGPU\""
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_BUILD_TYPE=Release"
@@ -122,12 +128,12 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DHAVE_LIBEDIT=Off"
 
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_BUILD_LLVM_DYLIB:BOOL=ON"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_LINK_LLVM_DYLIB:BOOL=ON"
-CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_INSTALL_PREFIX=$prefix"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_INSTALL_PREFIX=${prefix}"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CROSSCOMPILING=True"
 
 # Tell cxxabi to use the LLVM unwinder
 #CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXXABI_USE_LLVM_UNWINDER=On"
-CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_FLAGS=\"-std=c++0x\""
+CMAKE_CXX_FLAGS="${CMAKE_CXX_FLAGS} -std=c++0x"
 
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TABLEGEN=${WORKSPACE}/srcdir/bin/llvm-tblgen"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCLANG_TABLEGEN=${WORKSPACE}/srcdir/bin/clang-tblgen"
@@ -146,6 +152,13 @@ if [[ "${target}" == *apple* ]] || [[ "${target}" == *freebsd* ]]; then
     # On clang-based platforms we need to override the check for ffs because it doesn't work with `clang`.
     export ac_cv_have_decl___builtin_ffs=yes
 fi
+
+if [[ "${target}" == *mingw* ]]; then
+    CMAKE_CPP_FLAGS="${CMAKE_CPP_FLAGS} -D__USING_SJLJ_EXCEPTIONS__ -D__CRT__NO_INLINE"
+fi
+
+CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_C_FLAGS=\"${CMAKE_CPP_FLAGS} ${CMAKE_C_FLAGS}\""
+CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_FLAGS=\"${CMAKE_CPP_FLAGS} ${CMAKE_CXX_FLAGS}\""
 
 # Build!
 cmake .. ${CMAKE_FLAGS}
