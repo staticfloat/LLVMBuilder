@@ -157,7 +157,9 @@ if [[ "${target}" == *apple* ]] || [[ "${target}" == *freebsd* ]]; then
 fi
 
 if [[ "${target}" == *mingw* ]]; then
-    CMAKE_CPP_FLAGS="${CMAKE_CPP_FLAGS} -D__USING_SJLJ_EXCEPTIONS__ -D__CRT__NO_INLINE"
+    CMAKE_CPP_FLAGS="${CMAKE_CPP_FLAGS} -remap -D__USING_SJLJ_EXCEPTIONS__ -D__CRT__NO_INLINE"
+    # The joy of Windows
+    echo "BaseTsd.h basetsd.h" >> /opt/${target}/${target}/include/header.gcc
 fi
 
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_C_FLAGS=\"${CMAKE_CPP_FLAGS} ${CMAKE_C_FLAGS}\""
