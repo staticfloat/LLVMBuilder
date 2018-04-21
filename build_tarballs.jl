@@ -59,17 +59,18 @@ done
 # This is because LLVM's cross-compile setup is kind of borked, so we just
 # build the tools natively ourselves, directly.  :/
 script = script_setup * raw"""
-# Build llvm-tblgen and clang-tblgen
+# Build llvm-tblgen, clang-tblgen, and llvm-config
 mkdir build && cd build
 CMAKE_FLAGS="-DLLVM_TARGETS_TO_BUILD:STRING=host"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_FLAGS=-std=c++0x"
 cmake .. ${CMAKE_FLAGS}
-make -j${nproc} llvm-tblgen clang-tblgen
+make -j${nproc} llvm-tblgen clang-tblgen llvm-config
 
-# Copy the tblgens into our destination `bin` folder:
+# Copy the tblgens and llvm-config into our destination `bin` folder:
 mkdir -p $prefix/bin
 mv bin/llvm-tblgen $prefix/bin/
 mv bin/clang-tblgen $prefix/bin/
+mv bin/llvm-config $prefix/bin/
 """
 
 # We'll do this build for x86_64-linux-gnu only, as that's the arch we're building on
@@ -81,6 +82,7 @@ platforms = [
 products(prefix) = [
     ExecutableProduct(prefix, "llvm-tblgen", :llvm_tblgen)
     ExecutableProduct(prefix, "clang-tblgen", :clang_tblgen)
+    ExecutableProduct(prefix, "llvm-config", :llvm_config)
 ]
 
 # Dependencies that must be installed before this package can be built
@@ -137,6 +139,7 @@ CMAKE_CXX_FLAGS="${CMAKE_CXX_FLAGS} -std=c++0x"
 
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TABLEGEN=${WORKSPACE}/srcdir/bin/llvm-tblgen"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCLANG_TABLEGEN=${WORKSPACE}/srcdir/bin/clang-tblgen"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_CONFIG_PATH=${WORKSPACE}/srcdir/bin/llvm-config"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_TOOLCHAIN_FILE=/opt/${target}/${target}.toolchain"
 
 if [[ "${target}" == *apple* ]]; then
