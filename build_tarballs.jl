@@ -164,6 +164,7 @@ fi
 
 # Build!
 cmake .. ${CMAKE_FLAGS} -DCMAKE_C_FLAGS="${CMAKE_CPP_FLAGS} ${CMAKE_C_FLAGS}" -DCMAKE_CXX_FLAGS="${CMAKE_CPP_FLAGS} ${CMAKE_CXX_FLAGS}"
+cmake -LA
 make -j${nproc} VERBOSE=1
 
 # Install!
