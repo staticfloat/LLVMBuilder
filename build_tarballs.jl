@@ -162,11 +162,8 @@ if [[ "${target}" == *mingw* ]]; then
     echo "BaseTsd.h basetsd.h" >> /opt/${target}/${target}/include/header.gcc
 fi
 
-CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_C_FLAGS=\"${CMAKE_CPP_FLAGS} ${CMAKE_C_FLAGS}\""
-CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_FLAGS=\"${CMAKE_CPP_FLAGS} ${CMAKE_CXX_FLAGS}\""
-
 # Build!
-cmake .. ${CMAKE_FLAGS}
+cmake .. ${CMAKE_FLAGS} -DCMAKE_C_FLAGS="${CMAKE_CPP_FLAGS} ${CMAKE_C_FLAGS}" -DCMAKE_CXX_FLAGS="${CMAKE_CPP_FLAGS} ${CMAKE_CXX_FLAGS}"
 make -j${nproc} VERBOSE=1
 
 # Install!
