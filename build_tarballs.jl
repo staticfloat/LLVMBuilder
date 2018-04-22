@@ -38,6 +38,8 @@ for f in *.src; do
     # clang lives in tools/clang and not projects/cfe
     if [[ ${f} == cfe-*.src ]]; then
         mv $(pwd)/${f} $(echo llvm-*.src)/tools/clang
+    elif [[ ${f} == polly-*.src ]]; then
+        mv $(pwd)/${f} $(echo llvm-*.src)/tools/polly
     else
         mv $(pwd)/${f} $(echo llvm-*.src)/projects/${f%-*}
     fi
