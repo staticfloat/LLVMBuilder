@@ -190,8 +190,12 @@ platforms = [
 
 # The products that we will ensure are always built
 products(prefix) = [
-    LibraryProduct(prefix, "libLLVM", :libLLVM)
+    # libraries
+    LibraryProduct(prefix, "libLLVM",  :libLLVM)
+    LibraryProduct(prefix, "libLTO",   :libLTO)
     LibraryProduct(prefix, "libclang", :libclang)
+    # tools
+    ExecutableProduct(prefix, "llvm-config", :llvm_config)
 ]
 
 # Dependencies that must be installed before this package can be built
