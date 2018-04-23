@@ -91,16 +91,26 @@ products(prefix) = [
 dependencies = [
 ]
 
-# Build the tarball, overriding ARGS so that the user doesn't shoot themselves in the foot.
-tblgen_ARGS = ["x86_64-linux-gnu"]
-if "--verbose" in ARGS
-    push!(tblgen_ARGS, "--verbose")
-end
-product_hashes = build_tarballs(tblgen_ARGS, "tblgen", sources, script, platforms, products, dependencies)
+# Build the tarball, overriding ARGS so that the user doesn't shoot themselves in the foot,
+# but only do this if we don't already have a Tblgen tarball available:
+tblgen_tarball = joinpath("products", "tblgen.x86_64-linux-gnu.tar.gz")
+if !isfile(tblgen_tarball)
+    tblgen_ARGS = ["x86_64-linux-gnu"]
+    if "--verbose" in ARGS
+        push!(tblgen_ARGS, "--verbose")
+    end
+    product_hashes = build_tarballs(tblgen_ARGS, "tblgen", sources, script, platforms, products, dependencies)
 
-# Extract path information to the built tblgen tarball and its hash
-tblgen_tarball, tblgen_hash = product_hashes["x86_64-linux-gnu"]
-tblgen_tarball = joinpath("products", tblgen_tarball)
+    # Extract path information to the built tblgen tarball and its hash
+    tblgen_tarball, tblgen_hash = product_hashes["x86_64-linux-gnu"]
+    tblgen_tarball = joinpath("products", tblgen_tarball)
+else
+    info("Using pre-built tblgen tarball at $(tblgen_tarball)")
+    using SHA: sha256
+    tblgen_hash = open(tblgen_tarball) do f
+        bytes2hex(sha256(f))
+    end
+end
 
 # Take that tarball, feed it into our next build as another "source".
 push!(sources, tblgen_tarball => tblgen_hash)
