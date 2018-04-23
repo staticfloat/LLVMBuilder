@@ -7,10 +7,10 @@ Subject: [PATCH] forcefully disable APPLE specific 'feature'
  lib/CMakeLists.txt | 8 ++++----
  1 file changed, 4 insertions(+), 4 deletions(-)
 
-diff --git a/lib/CMakeLists.txt b/lib/CMakeLists.txt
+diff --git a/projects/libcxx/lib/CMakeLists.txt b/projects/libcxx/lib/CMakeLists.txt
 index aa5ebf156..0d3220dea 100644
---- a/lib/CMakeLists.txt
-+++ b/lib/CMakeLists.txt
+--- a/projects/libcxx/lib/CMakeLists.txt
++++ b/projects/libcxx/lib/CMakeLists.txt
 @@ -39,10 +39,10 @@ if (LIBCXX_GENERATE_COVERAGE AND NOT LIBCXX_COVERAGE_LIBRARY)
  endif()
  add_library_flags_if(LIBCXX_COVERAGE_LIBRARY "${LIBCXX_COVERAGE_LIBRARY}")
