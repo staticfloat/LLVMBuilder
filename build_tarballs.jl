@@ -129,9 +129,13 @@ CMAKE_CPP_FLAGS=""
 CMAKE_CXX_FLAGS=""
 CMAKE_C_FLAGS=""
 
-# These are the CMAKE flags we're going to build with:
+# Start the cmake flags off with building for both our host arch, NVidia and AMD
 CMAKE_FLAGS="-DLLVM_TARGETS_TO_BUILD:STRING=\"host\;NVPTX\;AMDGPU\""
+
+# Also target Wasm because Javascript is the Platform Of The Future (TM)
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD:STRING=\"WebAssembly\""
+
+# We want a relase build with no bindings
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_BUILD_TYPE=Release"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_BINDINGS_LIST=\"\" "
 
@@ -141,17 +145,27 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_ENABLE_TERMINFO=Off"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DHAVE_HISTEDIT_H=Off"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DHAVE_LIBEDIT=Off"
 
+# We want a shared library
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_BUILD_LLVM_DYLIB:BOOL=ON"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_LINK_LLVM_DYLIB:BOOL=ON"
+
+# Install things into $prefix, and make sure it knows we're cross-compiling
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_INSTALL_PREFIX=${prefix}"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CROSSCOMPILING=True"
 
+# Tell LLVM where our pre-built tblgen tools are
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TABLEGEN=${WORKSPACE}/srcdir/bin/llvm-tblgen"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCLANG_TABLEGEN=${WORKSPACE}/srcdir/bin/clang-tblgen"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_CONFIG_PATH=${WORKSPACE}/srcdir/bin/llvm-config"
+
+# Explicitly use our cmake toolchain file
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_TOOLCHAIN_FILE=/opt/${target}/${target}.toolchain"
+
+# Manually set the host triplet, as otherwise on some platforms it tries to guess using
+# `ld -v`, which is hilariously wrong.
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_HOST_TRIPLE=${target}"
 
+# Maximize homogeneity across platforms as this is necessary for windows and ppc64le
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXX_ENABLE_THREADS=OFF"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXX_ENABLE_MONOTONIC_CLOCK=OFF"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXXABI_ENABLE_THREADS=OFF"
@@ -172,8 +186,10 @@ fi
 
 if [[ "${target}" == *mingw* ]]; then
     CMAKE_CPP_FLAGS="${CMAKE_CPP_FLAGS} -remap -D__USING_SJLJ_EXCEPTIONS__ -D__CRT__NO_INLINE"
-    # The joy of Windows
+    # Windows is case-insensitive and some dependencies take full advantage of that
     echo "BaseTsd.h basetsd.h" >> /opt/${target}/${target}/include/header.gcc
+
+    # We don't build libc++, libc++abi or Polly on windows
     CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXXABI_BUILD=OFF"
     CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXX_BUILD=OFF"
     CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBUNWIND_BUILD=OFF"
