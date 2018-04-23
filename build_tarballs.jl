@@ -38,6 +38,8 @@ for f in *.src; do
     # clang lives in tools/clang and not projects/cfe
     if [[ ${f} == cfe-*.src ]]; then
         mv $(pwd)/${f} $(echo llvm-*.src)/tools/clang
+    elif [[ ${f} == polly-*.src ]]; then
+        mv $(pwd)/${f} $(echo llvm-*.src)/tools/polly
     else
         mv $(pwd)/${f} $(echo llvm-*.src)/projects/${f%-*}
     fi
@@ -59,17 +61,18 @@ done
 # This is because LLVM's cross-compile setup is kind of borked, so we just
 # build the tools natively ourselves, directly.  :/
 script = script_setup * raw"""
-# Build llvm-tblgen and clang-tblgen
+# Build llvm-tblgen, clang-tblgen, and llvm-config
 mkdir build && cd build
 CMAKE_FLAGS="-DLLVM_TARGETS_TO_BUILD:STRING=host"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_FLAGS=-std=c++0x"
 cmake .. ${CMAKE_FLAGS}
-make -j${nproc} llvm-tblgen clang-tblgen
+make -j${nproc} llvm-tblgen clang-tblgen llvm-config
 
-# Copy the tblgens into our destination `bin` folder:
+# Copy the tblgens and llvm-config into our destination `bin` folder:
 mkdir -p $prefix/bin
 mv bin/llvm-tblgen $prefix/bin/
 mv bin/clang-tblgen $prefix/bin/
+mv bin/llvm-config $prefix/bin/
 """
 
 # We'll do this build for x86_64-linux-gnu only, as that's the arch we're building on
@@ -81,6 +84,7 @@ platforms = [
 products(prefix) = [
     ExecutableProduct(prefix, "llvm-tblgen", :llvm_tblgen)
     ExecutableProduct(prefix, "clang-tblgen", :clang_tblgen)
+    ExecutableProduct(prefix, "llvm-config", :llvm_config)
 ]
 
 # Dependencies that must be installed before this package can be built
@@ -109,8 +113,15 @@ LLVM_DIR=$(pwd)
 # Let's do the actual build within the `build` subdirectory
 mkdir build && cd build
 
+# Accumulate these flags outside CMAKE_FLAGS,
+# they will be added at the end.
+CMAKE_CPP_FLAGS=""
+CMAKE_CXX_FLAGS=""
+CMAKE_C_FLAGS=""
+
 # These are the CMAKE flags we're going to build with:
-CMAKE_FLAGS="-DLLVM_TARGETS_TO_BUILD:STRING=\"host;NVPTX;AMDGPU\""
+CMAKE_FLAGS="-DLLVM_TARGETS_TO_BUILD:STRING=\"host\;NVPTX\;AMDGPU\""
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD:STRING=\"WebAssembly\""
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_BUILD_TYPE=Release"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_BINDINGS_LIST=\"\" "
 
@@ -122,16 +133,19 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DHAVE_LIBEDIT=Off"
 
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_BUILD_LLVM_DYLIB:BOOL=ON"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_LINK_LLVM_DYLIB:BOOL=ON"
-CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_INSTALL_PREFIX=$prefix"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_DYLIB_SYMBOL_VERSIONING=ON"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_INSTALL_PREFIX=${prefix}"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CROSSCOMPILING=True"
-
-# Tell cxxabi to use the LLVM unwinder
-#CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXXABI_USE_LLVM_UNWINDER=On"
-CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_FLAGS=\"-std=c++0x\""
 
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TABLEGEN=${WORKSPACE}/srcdir/bin/llvm-tblgen"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCLANG_TABLEGEN=${WORKSPACE}/srcdir/bin/clang-tblgen"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_CONFIG_PATH=${WORKSPACE}/srcdir/bin/llvm-config"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_TOOLCHAIN_FILE=/opt/${target}/${target}.toolchain"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_HOST_TRIPLE=${target}"
+
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXX_ENABLE_THREADS=OFF"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXX_ENABLE_MONOTONIC_CLOCK=OFF"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXXABI_ENABLE_THREADS=OFF"
 
 if [[ "${target}" == *apple* ]]; then
     # On OSX, we need to override LLVM's looking around for our SDK
@@ -147,8 +161,19 @@ if [[ "${target}" == *apple* ]] || [[ "${target}" == *freebsd* ]]; then
     export ac_cv_have_decl___builtin_ffs=yes
 fi
 
+if [[ "${target}" == *mingw* ]]; then
+    CMAKE_CPP_FLAGS="${CMAKE_CPP_FLAGS} -remap -D__USING_SJLJ_EXCEPTIONS__ -D__CRT__NO_INLINE"
+    # The joy of Windows
+    echo "BaseTsd.h basetsd.h" >> /opt/${target}/${target}/include/header.gcc
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXXABI_BUILD=OFF"
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXX_BUILD=OFF"
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBUNWIND_BUILD=OFF"
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_POLLY_BUILD=OFF"
+fi
+
 # Build!
-cmake .. ${CMAKE_FLAGS}
+cmake .. ${CMAKE_FLAGS} -DCMAKE_C_FLAGS="${CMAKE_CPP_FLAGS} ${CMAKE_C_FLAGS}" -DCMAKE_CXX_FLAGS="${CMAKE_CPP_FLAGS} ${CMAKE_CXX_FLAGS}"
+cmake -LA
 make -j${nproc} VERBOSE=1
 
 # Install!
@@ -170,7 +195,12 @@ platforms = [
 
 # The products that we will ensure are always built
 products(prefix) = [
-    LibraryProduct(prefix, "libLLVM", :libLLVM)
+    # libraries
+    LibraryProduct(prefix, "libLLVM",  :libLLVM)
+    LibraryProduct(prefix, "libLTO",   :libLTO)
+    LibraryProduct(prefix, "libclang", :libclang)
+    # tools
+    ExecutableProduct(prefix, "llvm-config", :llvm_config)
 ]
 
 # Dependencies that must be installed before this package can be built
