@@ -170,6 +170,9 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXX_ENABLE_THREADS=OFF"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXX_ENABLE_MONOTONIC_CLOCK=OFF"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXXABI_ENABLE_THREADS=OFF"
 
+# Explicitly disable libunwind, since it conflicts with the libunwind used by Julia
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBUNWIND_BUILD=OFF"
+
 if [[ "${target}" == *apple* ]]; then
     # On OSX, we need to override LLVM's looking around for our SDK
     CMAKE_FLAGS="${CMAKE_FLAGS} -DDARWIN_macosx_CACHED_SYSROOT:STRING=/opt/${target}/MacOSX10.10.sdk"
@@ -192,8 +195,13 @@ if [[ "${target}" == *mingw* ]]; then
     # We don't build libc++, libc++abi or Polly on windows
     CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXXABI_BUILD=OFF"
     CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXX_BUILD=OFF"
-    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBUNWIND_BUILD=OFF"
     CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_POLLY_BUILD=OFF"
+fi
+
+if [[ "${target}" == arm-linux-gnueabihf ]]; then
+    # We would need libunwind on arm for these two targets.
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXXABI_BUILD=OFF"
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXX_BUILD=OFF"
 fi
 
 # Build!
