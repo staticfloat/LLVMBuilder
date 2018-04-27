@@ -211,6 +211,9 @@ make -j${nproc} VERBOSE=1
 
 # Install!
 make install -j${nproc} VERBOSE=1
+
+# move $prefix/bin to $prefix/tools to match Julia's directory setup
+mv ${prefix}/bin ${prefix}/tools
 """
 
 # These are the platforms we will build for by default, unless further
