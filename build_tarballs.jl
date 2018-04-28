@@ -165,13 +165,13 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_TOOLCHAIN_FILE=/opt/${target}/${target}.tool
 # `ld -v`, which is hilariously wrong.
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_HOST_TRIPLE=${target}"
 
-# Maximize homogeneity across platforms as this is necessary for windows and ppc64le
-CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXX_ENABLE_THREADS=OFF"
-CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXX_ENABLE_MONOTONIC_CLOCK=OFF"
-CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXXABI_ENABLE_THREADS=OFF"
-
-# Explicitly disable libunwind, since it conflicts with the libunwind used by Julia
+# For now we focus on building llvm, clang, polly, and compiler-rt.
+# We would like to build libc++, libc++abi and libunwind eventually
+# but we currently don't due to issues on ppc and windows with
+# libc++ and the LLVM libunwind conflicts with the one Julia is using.
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBUNWIND_BUILD=OFF"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXX_BUILD=OFF"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXXABI_BUILD=OFF"
 
 if [[ "${target}" == *apple* ]]; then
     # On OSX, we need to override LLVM's looking around for our SDK
@@ -192,16 +192,8 @@ if [[ "${target}" == *mingw* ]]; then
     # Windows is case-insensitive and some dependencies take full advantage of that
     echo "BaseTsd.h basetsd.h" >> /opt/${target}/${target}/include/header.gcc
 
-    # We don't build libc++, libc++abi or Polly on windows
-    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXXABI_BUILD=OFF"
-    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXX_BUILD=OFF"
+    # We don't Polly on windows
     CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_POLLY_BUILD=OFF"
-fi
-
-if [[ "${target}" == arm-linux-gnueabihf ]]; then
-    # We would need libunwind on arm for these two targets.
-    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXXABI_BUILD=OFF"
-    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXX_BUILD=OFF"
 fi
 
 # Build!
