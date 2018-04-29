@@ -153,6 +153,10 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_LINK_LLVM_DYLIB:BOOL=ON"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_INSTALL_PREFIX=${prefix}"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CROSSCOMPILING=True"
 
+# Julia expects the produced LLVM tools to be installed into tools and not bin
+# We can't simply move bin to tools since on MingW64 it will also contain the shlib.
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOLS_INSTALL_DIR=${prefix}/tools"
+
 # Tell LLVM where our pre-built tblgen tools are
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TABLEGEN=${WORKSPACE}/srcdir/bin/llvm-tblgen"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCLANG_TABLEGEN=${WORKSPACE}/srcdir/bin/clang-tblgen"
@@ -204,8 +208,11 @@ make -j${nproc} VERBOSE=1
 # Install!
 make install -j${nproc} VERBOSE=1
 
-# move $prefix/bin to $prefix/tools to match Julia's directory setup
-mv ${prefix}/bin ${prefix}/tools
+# move clang products out of $prefix/bin to $prefix/tools
+mv ${prefix}/bin/clang* ${prefix}/tools/
+mv ${prefix}/bin/scan-* ${prefix}/tools/
+mv ${prefix}/bin/c-index* ${prefix}/tools/
+mv ${prefix}/bin/git-clang* ${prefix}/tools/
 """
 
 # These are the platforms we will build for by default, unless further
