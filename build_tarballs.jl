@@ -153,6 +153,10 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_LINK_LLVM_DYLIB:BOOL=ON"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_INSTALL_PREFIX=${prefix}"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CROSSCOMPILING=True"
 
+# Julia expects the produced LLVM tools to be installed into tools and not bin
+# We can't simply move bin to tools since on MingW64 it will also contain the shlib.
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOLS_INSTALL_DIR=${prefix}/tools"
+
 # Tell LLVM where our pre-built tblgen tools are
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TABLEGEN=${WORKSPACE}/srcdir/bin/llvm-tblgen"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DCLANG_TABLEGEN=${WORKSPACE}/srcdir/bin/clang-tblgen"
@@ -165,13 +169,13 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_TOOLCHAIN_FILE=/opt/${target}/${target}.tool
 # `ld -v`, which is hilariously wrong.
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_HOST_TRIPLE=${target}"
 
-# Maximize homogeneity across platforms as this is necessary for windows and ppc64le
-CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXX_ENABLE_THREADS=OFF"
-CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXX_ENABLE_MONOTONIC_CLOCK=OFF"
-CMAKE_FLAGS="${CMAKE_FLAGS} -DLIBCXXABI_ENABLE_THREADS=OFF"
-
-# Explicitly disable libunwind, since it conflicts with the libunwind used by Julia
+# For now we focus on building llvm, clang, polly, and compiler-rt.
+# We would like to build libc++, libc++abi and libunwind eventually
+# but we currently don't due to issues on ppc and windows with
+# libc++ and the LLVM libunwind conflicts with the one Julia is using.
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBUNWIND_BUILD=OFF"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXX_BUILD=OFF"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXXABI_BUILD=OFF"
 
 if [[ "${target}" == *apple* ]]; then
     # On OSX, we need to override LLVM's looking around for our SDK
@@ -192,16 +196,8 @@ if [[ "${target}" == *mingw* ]]; then
     # Windows is case-insensitive and some dependencies take full advantage of that
     echo "BaseTsd.h basetsd.h" >> /opt/${target}/${target}/include/header.gcc
 
-    # We don't build libc++, libc++abi or Polly on windows
-    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXXABI_BUILD=OFF"
-    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXX_BUILD=OFF"
+    # We don't Polly on windows
     CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_POLLY_BUILD=OFF"
-fi
-
-if [[ "${target}" == arm-linux-gnueabihf ]]; then
-    # We would need libunwind on arm for these two targets.
-    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXXABI_BUILD=OFF"
-    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXX_BUILD=OFF"
 fi
 
 # Build!
@@ -212,8 +208,18 @@ make -j${nproc} VERBOSE=1
 # Install!
 make install -j${nproc} VERBOSE=1
 
-# move $prefix/bin to $prefix/tools to match Julia's directory setup
-mv ${prefix}/bin ${prefix}/tools
+# move clang products out of $prefix/bin to $prefix/tools
+mv ${prefix}/bin/clang* ${prefix}/tools/
+mv ${prefix}/bin/scan-* ${prefix}/tools/
+mv ${prefix}/bin/c-index* ${prefix}/tools/
+mv ${prefix}/bin/git-clang* ${prefix}/tools/
+
+# Live is harsh on Windows and dynamic libraries are
+# espected to live alongside the binaries. So we have
+# to copy the *.dll from bin/ to tools/ as well...
+if [[ "${target}" == *mingw* ]]; then
+    cp ${prefix}/bin/*.dll ${prefix}/tools/
+fi
 """
 
 # These are the platforms we will build for by default, unless further
