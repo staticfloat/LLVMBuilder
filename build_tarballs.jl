@@ -213,6 +213,13 @@ mv ${prefix}/bin/clang* ${prefix}/tools/
 mv ${prefix}/bin/scan-* ${prefix}/tools/
 mv ${prefix}/bin/c-index* ${prefix}/tools/
 mv ${prefix}/bin/git-clang* ${prefix}/tools/
+
+# Live is harsh on Windows and dynamic libraries are
+# espected to live alongside the binaries. So we have
+# to copy the *.dll from bin/ to tools/ as well...
+if [[ "${target}" == *mingw* ]]; then
+    cp ${prefix}/bin/*.dll ${prefix}/tools/
+fi
 """
 
 # These are the platforms we will build for by default, unless further
