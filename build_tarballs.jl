@@ -135,8 +135,14 @@ CMAKE_FLAGS="-DLLVM_TARGETS_TO_BUILD:STRING=\"host\;NVPTX\;AMDGPU\""
 # Also target Wasm because Javascript is the Platform Of The Future (TM)
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD:STRING=\"WebAssembly\""
 
-# We want a relase build with no bindings
-CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_BUILD_TYPE=Release"
+if [[ "${ASSERTIONS}" == "1" ]]; then
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_BUILD_TYPE=RelWithDebInfo"
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_ENABLE_ASSERTIONS:BOOL=ON"
+else
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_BUILD_TYPE=Release"
+fi
+
+# We want a build with no bindings
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_BINDINGS_LIST=\"\" "
 
 # Disable useless things like docs, terminfo, etc....
@@ -205,6 +211,9 @@ cmake .. ${CMAKE_FLAGS} -DCMAKE_C_FLAGS="${CMAKE_CPP_FLAGS} ${CMAKE_C_FLAGS}" -D
 cmake -LA
 make -j${nproc} VERBOSE=1
 
+# Test
+make check -j${nproc}
+
 # Install!
 make install -j${nproc} VERBOSE=1
 
@@ -215,7 +224,7 @@ mv ${prefix}/bin/c-index* ${prefix}/tools/
 mv ${prefix}/bin/git-clang* ${prefix}/tools/
 
 # Live is harsh on Windows and dynamic libraries are
-# espected to live alongside the binaries. So we have
+# expected to live alongside the binaries. So we have
 # to copy the *.dll from bin/ to tools/ as well...
 if [[ "${target}" == *mingw* ]]; then
     cp ${prefix}/bin/*.dll ${prefix}/tools/
@@ -250,7 +259,10 @@ dependencies = [
 ]
 
 # Build the tarballs, and possibly a `build.jl` as well.
-build_tarballs(ARGS, "LLVM", sources, script, platforms, products, dependencies)
+debug = "ASSERTIONS=1" * script
+build_tarballs(ARGS, "LLVM.dbg", sources, debug, platforms, products, dependencies)
+release = "ASSERTIONS=0" * script
+build_tarballs(ARGS, "LLVM", sources, release, platforms, products, dependencies)
 
 # Remove tblgen tarball as it's no longer useful, and we don't want to upload them.
 rm(tblgen_tarball; force=true)
