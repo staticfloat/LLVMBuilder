@@ -28,23 +28,6 @@ Index: llvm/trunk/lib/Target/X86/X86DomainReassignment.cpp
      return Instrs;
    }
  
-+  LLVM_DUMP_METHOD void dump(const MachineRegisterInfo *MRI) const {
-+    dbgs() << "Registers: ";
-+    bool First = true;
-+    for (unsigned Reg : Edges) {
-+      if (!First)
-+        dbgs() << ", ";
-+      First = false;
-+      dbgs() << printReg(Reg, MRI->getTargetRegisterInfo(), 0, MRI);
-+    }
-+    dbgs() << "\n" << "Instructions:";
-+    for (MachineInstr *MI : Instrs) {
-+      dbgs() << "\n  ";
-+      MI->print(dbgs());
-+    }
-+    dbgs() << "\n";
-+  }
-+
 +  unsigned getID() const {
 +    return ID;
 +  }
@@ -101,7 +84,6 @@ Index: llvm/trunk/lib/Target/X86/X86DomainReassignment.cpp
  
 -  for (Closure &C : Closures)
 +  for (Closure &C : Closures) {
-+    DEBUG(C.dump(MRI));
      if (isReassignmentProfitable(C, MaskDomain)) {
        reassign(C, MaskDomain);
        ++NumClosuresConverted;
