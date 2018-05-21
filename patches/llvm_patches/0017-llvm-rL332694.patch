@@ -1,43 +1,38 @@
-Index: llvm/trunk/test/CodeGen/X86/domain-reassignment-test.ll
-===================================================================
---- a/test/CodeGen/X86/domain-reassignment-test.ll	(revision 332693)
-+++ b/test/CodeGen/X86/domain-reassignment-test.ll	(revision 332694)
-@@ -1,37 +1,37 @@
+From f5e705e8039d8b6a5813b47239a9cf801cccbe00 Mon Sep 17 00:00:00 2001
+From: Keno Fischer <keno@alumni.harvard.edu>
+Date: Fri, 18 May 2018 04:36:38 +0000
+Subject: [PATCH] [X86DomainReassignment] Hopefully fix buildbot failure
+
+The Darwin build bot failed with:
+```
+llc -mcpu=skylake-avx512 -mtriple=x86_64-unknown-linux-gnu domain-reassignment-test.ll -o - | llvm-mc
+--
+Exit Code: 134
+
+Command Output (stderr):
+--
+Assertion failed: (MAI->hasSingleParameterDotFile()), function EmitFileDirective, file lib/MC/MCAsmStreamer.cpp, line 1087.
+```
+
+Looks like this is because the `llvm-mc` command was missing a triple
+directive and defaulting to MachO. Add the triple option.
+
+git-svn-id: https://llvm.org/svn/llvm-project/llvm/trunk@332694 91177308-0d34-0410-b5e6-96231b3b80d8
+---
+ test/CodeGen/X86/domain-reassignment-test.ll | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/test/CodeGen/X86/domain-reassignment-test.ll b/test/CodeGen/X86/domain-reassignment-test.ll
+index 6285537df74..af7aca67c8f 100644
+--- a/test/CodeGen/X86/domain-reassignment-test.ll
++++ b/test/CodeGen/X86/domain-reassignment-test.ll
+@@ -1,5 +1,5 @@
  ; RUN: llc -mcpu=skylake-avx512 -mtriple=x86_64-unknown-linux-gnu %s -o - | FileCheck %s
 -; RUN: llc -mcpu=skylake-avx512 -mtriple=x86_64-unknown-linux-gnu %s -o - | llvm-mc
 +; RUN: llc -mcpu=skylake-avx512 -mtriple=x86_64-unknown-linux-gnu %s -o - | llvm-mc -triple=x86_64-unknown-linux-gnu
  
  ; Check that the X86 domain reassignment pass doesn't introduce an illegal
  ; test instruction. See PR37396
- define void @japi1_foo2_34617() {
- pass2:
-   br label %if5
- 
- L174:
-   %tmp = icmp sgt <2 x i64> undef, zeroinitializer
-   %tmp1 = icmp sle <2 x i64> undef, undef
-   %tmp2 = and <2 x i1> %tmp, %tmp1
-   %tmp3 = extractelement <2 x i1> %tmp2, i32 0
-   %tmp4 = extractelement <2 x i1> %tmp2, i32 1
-   %tmp106 = and i1 %tmp4, %tmp3
-   %tmp107 = zext i1 %tmp106 to i8
-   %tmp108 = and i8 %tmp122, %tmp107
-   %tmp109 = icmp eq i8 %tmp108, 0
- ; CHECK-NOT: testb  {{%k[0-7]}}
-   br i1 %tmp109, label %L188, label %L190
- 
- if5:
-   %b.055 = phi i8 [ 1, %pass2 ], [ %tmp122, %if5 ]
-   %tmp118 = icmp sgt i64 undef, 0
-   %tmp119 = icmp sle i64 undef, undef
-   %tmp120 = and i1 %tmp118, %tmp119
-   %tmp121 = zext i1 %tmp120 to i8
-   %tmp122 = and i8 %b.055, %tmp121
-   br i1 undef, label %L174, label %if5
- 
- L188:
-   unreachable
- 
- L190:
-   ret void
- }
+-- 
+2.17.0
+
