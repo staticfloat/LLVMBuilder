@@ -24,7 +24,7 @@ Index: llvm/trunk/lib/Target/X86/X86DomainReassignment.cpp
      for (RegDomain D : LegalDstDomainList)
        LegalDstDomains.set(D);
    }
-@@ -328,6 +333,27 @@
+@@ -328,6 +333,10 @@
      return Instrs;
    }
  
@@ -69,7 +69,7 @@ Index: llvm/trunk/lib/Target/X86/X86DomainReassignment.cpp
    for (unsigned Idx = 0; Idx < MRI->getNumVirtRegs(); ++Idx) {
      unsigned Reg = TargetRegisterInfo::index2VirtReg(Idx);
  
-@@ -717,20 +744,22 @@
+@@ -717,20 +744,21 @@
        continue;
  
      // Calculate closure starting with Reg.
