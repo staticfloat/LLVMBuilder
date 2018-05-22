@@ -26,6 +26,9 @@ sources = [
 
 # Since we kind of do this LLVM setup twice, this is the shared setup start:
 script_setup = raw"""
+# We want to exit the program if errors occur.
+set -o errexit
+
 cd $WORKSPACE/srcdir/
 
 # First, move our other projects into llvm/projects
@@ -215,11 +218,11 @@ fi
 
 # Build!
 cmake .. ${CMAKE_FLAGS} -DCMAKE_C_FLAGS="${CMAKE_CPP_FLAGS} ${CMAKE_C_FLAGS}" -DCMAKE_CXX_FLAGS="${CMAKE_CPP_FLAGS} ${CMAKE_CXX_FLAGS}"
-cmake -LA
+cmake -LA || true
 make -j${nproc} VERBOSE=1
 
 # Test
-make check -j${nproc}
+make check -j${nproc} || { (>&2 echo "make check failed");}
 
 # Install!
 make install -j${nproc} VERBOSE=1
