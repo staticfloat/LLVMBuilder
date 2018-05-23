@@ -141,7 +141,7 @@ CMAKE_FLAGS="-DLLVM_TARGETS_TO_BUILD:STRING=\"host\;NVPTX\;AMDGPU\""
 # Also target Wasm because Javascript is the Platform Of The Future (TM)
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD:STRING=\"WebAssembly\""
 
-if [[ "${ASSERTIONS}" == "1" ]]; then
+if [[ "${RELDBG}" == "1" ]]; then
     CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_BUILD_TYPE=RelWithDebInfo"
     CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_ENABLE_ASSERTIONS:BOOL=ON"
 else
@@ -222,7 +222,9 @@ cmake -LA || true
 make -j${nproc} VERBOSE=1
 
 # Test
-make check -j${nproc} || { (>&2 echo "make check failed");}
+if [[ "${CHECK}" == "1" ]]; then
+make check -j${nproc}
+fi
 
 # Install!
 make install -j${nproc} VERBOSE=1
@@ -269,15 +271,24 @@ dependencies = [
 ]
 
 # Build the tarballs, and possibly a `build.jl` as well.
+config = ""
+name = "LLVM"
 if !("--llvm-release" in llvm_ARGS)
-    debug = "ASSERTIONS=1" * script
-    build_tarballs(ARGS, "LLVM.dbg", sources, debug, platforms, products, dependencies)
-    rm("products/build.jl")
+    config *= "RELDBG=1\n"
+    name *= ".dbg"
+elseif !("--llvm-reldbg" in llvm_ARGS)
+    config *= "RELDBG=0\n"
+else
+    error("Both --llvm-reldbg, and --llvm-release passed. Choose only one.")
 end
-if !("--llvm-debug" in llvm_ARGS)
-    release = "ASSERTIONS=0" * script
-    build_tarballs(ARGS, "LLVM", sources, release, platforms, products, dependencies)
+
+if "--llvm-check" in llvm_ARGS
+   config *= "CHECK=1\n"
+else
+   config *= "CHECK=0\n"
 end
+
+build_tarballs(ARGS, name, sources, config * script, platforms, products, dependencies)
 
 if !("--llvm-keep-tblgen" in llvm_ARGS)
     # Remove tblgen tarball as it's no longer useful, and we don't want to upload them.

@@ -11,4 +11,5 @@ This is an example repository showing how to construct a "builder" repository fo
   1. `--llvm-release` Only build a release build
   2. `--llvm-debug` Only build a debug build
   3. `--llvm-keep-tblgen` Keep tblgen around for later builds
+  3. `--llvm-check` Run unit tests
 3. Use [ghr](https://github.com/tcnksm/ghr) or similar to upload builds to github
