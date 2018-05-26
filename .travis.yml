@@ -11,10 +11,13 @@ cache:
   timeout: 1000
   directories:
     - downloads
+    - shards
 env:
   global:
     - BINARYBUILDER_DOWNLOADS_CACHE=downloads
+    - BINARYBUILDER_SHARDS_DIR=shards
     - BINARYBUILDER_AUTOMATIC_APPLE=true
+    - BINARYBUILDER_USE_CCACHE=true
   # Our build takes too long for one job, so split targets across multiple jobs
   matrix:
     - TARGET=x86_64-linux-gnu
@@ -39,7 +42,8 @@ before_script:
   - julia -e 'Pkg.clone("https://github.com/JuliaPackaging/BinaryBuilder.jl"); Pkg.build()'
 
 script:
-  - julia build_tarballs.jl $TARGET
+  - julia build_tarballs.jl --llvm-reldbg --llvm-keep-tblgen $TARGET
+  - julia build_tarballs.jl --llvm-release $TARGET
 
 deploy:
   provider: releases
