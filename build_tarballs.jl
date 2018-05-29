@@ -67,7 +67,6 @@ script = script_setup * raw"""
 # Build llvm-tblgen, clang-tblgen, and llvm-config
 mkdir build && cd build
 CMAKE_FLAGS="-DLLVM_TARGETS_TO_BUILD:STRING=host"
-CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_FLAGS=-std=c++0x"
 cmake .. ${CMAKE_FLAGS}
 make -j${nproc} llvm-tblgen clang-tblgen llvm-config
 
@@ -78,9 +77,9 @@ mv bin/clang-tblgen $prefix/bin/
 mv bin/llvm-config $prefix/bin/
 """
 
-# We'll do this build for x86_64-linux-gnu only, as that's the arch we're building on
+# We'll do this build for x86_64-linux-musl only, as that's the arch we're building on
 platforms = [
-    Linux(:x86_64),
+    Linux(:x86_64, :musl),
 ]
 
 # We only care about llvm-tblgen and clang-tblgen
@@ -99,16 +98,16 @@ filter!(s->!startswith(s, "--llvm"), ARGS)
 
 # Build the tarball, overriding ARGS so that the user doesn't shoot themselves in the foot,
 # but only do this if we don't already have a Tblgen tarball available:
-tblgen_tarball = joinpath("products", "tblgen.x86_64-linux-gnu.tar.gz")
+tblgen_tarball = joinpath("products", "tblgen.x86_64-linux-musl.tar.gz")
 if !isfile(tblgen_tarball)
-    tblgen_ARGS = ["x86_64-linux-gnu"]
+    tblgen_ARGS = ["x86_64-linux-musl"]
     if "--verbose" in ARGS
         push!(tblgen_ARGS, "--verbose")
     end
     product_hashes = build_tarballs(tblgen_ARGS, "tblgen", sources, script, platforms, products, dependencies)
 
     # Extract path information to the built tblgen tarball and its hash
-    tblgen_tarball, tblgen_hash = product_hashes["x86_64-linux-gnu"]
+    tblgen_tarball, tblgen_hash = product_hashes["x86_64-linux-musl"]
     tblgen_tarball = joinpath("products", tblgen_tarball)
 else
     info("Using pre-built tblgen tarball at $(tblgen_tarball)")
