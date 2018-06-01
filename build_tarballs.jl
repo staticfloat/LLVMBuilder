@@ -1,3 +1,12 @@
+###
+# LLVMBuilder -- reliable LLVM builds all the time.
+#
+# --llvm-release: Build the release version on all supported platforms
+# --llvm-reldbg: Build the RelWithDebInfo+Asserts version
+# --llvm-check: Build a RelWithDebInfo+Asserts version on x86-64-linux-musl
+#               and run the testsuite. This will build for all targets.
+###
+
 using BinaryBuilder
 
 # Collection of sources required to build LLVM
