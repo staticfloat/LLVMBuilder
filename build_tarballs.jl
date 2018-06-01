@@ -218,6 +218,13 @@ if [[ "${target}" == *mingw* ]]; then
     CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_POLLY_BUILD=OFF"
 fi
 
+if [[ "${target}" == *musl* ]]; then
+    # Taken from https://git.alpinelinux.org/cgit/aports/tree/main/compiler-rt/APKBUILD
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DCOMPILER_RT_INCLUDE_TESTS=ON"
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DCOMPILER_RT_BUILD_SANITIZERS=OFF"
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DCOMPILER_RT_BUILD_XRAY=OFF"
+fi
+
 # Build!
 cmake .. ${CMAKE_FLAGS} -DCMAKE_C_FLAGS="${CMAKE_CPP_FLAGS} ${CMAKE_C_FLAGS}" -DCMAKE_CXX_FLAGS="${CMAKE_CPP_FLAGS} ${CMAKE_CXX_FLAGS}"
 cmake -LA || true
