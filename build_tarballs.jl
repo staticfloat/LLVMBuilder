@@ -134,8 +134,11 @@ CMAKE_CPP_FLAGS=""
 CMAKE_CXX_FLAGS=""
 CMAKE_C_FLAGS=""
 
-# Start the cmake flags off with building for both our host arch, NVidia and AMD
-CMAKE_FLAGS="-DLLVM_TARGETS_TO_BUILD:STRING=\"host\;NVPTX\;AMDGPU\""
+CMAKE_FLAGS=""
+if [[ "${CHECK}" == "0" ]]; then
+    # Start the cmake flags off with building for both our host arch, NVidia and AMD
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TARGETS_TO_BUILD:STRING=\"host\;NVPTX\;AMDGPU\""
+fi
 
 # Also target Wasm because Javascript is the Platform Of The Future (TM)
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD:STRING=\"WebAssembly\""
@@ -222,7 +225,7 @@ make -j${nproc} VERBOSE=1
 
 # Test
 if [[ "${CHECK}" == "1" ]]; then
-make check -j${nproc}
+    make check -j${nproc}
 fi
 
 # Install!
@@ -283,6 +286,7 @@ end
 
 if "--llvm-check" in llvm_ARGS
    config *= "CHECK=1\n"
+   name *= ".check"
 else
    config *= "CHECK=0\n"
 end
