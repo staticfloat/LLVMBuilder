@@ -252,18 +252,26 @@ if [[ "${target}" == *mingw* ]]; then
 fi
 """
 
-# These are the platforms we will build for by default, unless further
-# platforms are passed in on the command line
-platforms = [
-    BinaryProvider.Linux(:i686, :glibc),
-    BinaryProvider.Linux(:x86_64, :glibc),
-    BinaryProvider.Linux(:aarch64, :glibc),
-    BinaryProvider.Linux(:armv7l, :glibc),
-    BinaryProvider.Linux(:powerpc64le, :glibc),
-    BinaryProvider.MacOS(),
-    BinaryProvider.Windows(:i686),
-    BinaryProvider.Windows(:x86_64)
-]
+if "--llvm-check" in llvm_ARGS
+   # BB is using musl as a platform and we don't want to run glibc binaries on it.
+   info("Restricting build to `x86_64-linux-musl`")
+   platforms = [
+        BinaryProvider.Linux(:x86_64, :musl)
+   ]
+else
+    # These are the platforms we will build for by default, unless further
+    # platforms are passed in on the command line
+    platforms = [
+        BinaryProvider.Linux(:i686, :glibc),
+        BinaryProvider.Linux(:x86_64, :glibc),
+        BinaryProvider.Linux(:aarch64, :glibc),
+        BinaryProvider.Linux(:armv7l, :glibc),
+        BinaryProvider.Linux(:powerpc64le, :glibc),
+        BinaryProvider.MacOS(),
+        BinaryProvider.Windows(:i686),
+        BinaryProvider.Windows(:x86_64)
+    ]
+end
 
 # The products that we will ensure are always built
 products(prefix) = [
