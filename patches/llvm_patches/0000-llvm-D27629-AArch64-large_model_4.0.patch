@@ -30,7 +30,7 @@ index 00000000000..e3eeb02ff01
 --- /dev/null
 +++ b/test/ExecutionEngine/RuntimeDyld/AArch64/ELF_ARM64_BE-large-relocations.s
 @@ -0,0 +1,18 @@
-+# RUN: llvm-mc -triple=aarch64_be-none-linux-gnu -code-model=large -filetype=obj -o %T/be-large-reloc.o %s
++# RUN: llvm-mc -triple=aarch64_be-none-linux-gnu -large-code-model -filetype=obj -o %T/be-large-reloc.o %s
 +# RUN: llvm-rtdyld -triple=aarch64_be-none-linux-gnu -verify -map-section be-large-reloc.o,.eh_frame=0x10000 -map-section be-large-reloc.o,.text=0xffff000000000000 -check=%s %T/be-large-reloc.o
 +
 +        .text
@@ -54,7 +54,7 @@ index 00000000000..ec30f19c476
 --- /dev/null
 +++ b/test/ExecutionEngine/RuntimeDyld/AArch64/ELF_ARM64_large-relocations.s
 @@ -0,0 +1,18 @@
-+# RUN: llvm-mc -triple=arm64-none-linux-gnu -code-model=large -filetype=obj -o %T/large-reloc.o %s
++# RUN: llvm-mc -triple=arm64-none-linux-gnu -large-code-model -filetype=obj -o %T/large-reloc.o %s
 +# RUN: llvm-rtdyld -triple=arm64-none-linux-gnu -verify -map-section large-reloc.o,.eh_frame=0x10000 -map-section large-reloc.o,.text=0xffff000000000000 -check=%s %T/large-reloc.o
 +
 +        .text

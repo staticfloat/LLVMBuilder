@@ -3,14 +3,14 @@
 release:
 	julia build_tarballs.jl --llvm-release
 
-debug:
-	julia build_tarballs.jl --llvm-debug
+reldbg:
+	julia build_tarballs.jl --llvm-reldbg
 
 check:
-	julia build_tarballs.jl --llvm-debug --llvm-check --verbose
+	julia build_tarballs.jl --llvm-check --verbose
 
 both:
-	julia build_tarballs.jl --llvm-debug
+	julia build_tarballs.jl --llvm-reldbg
 	julia build_tarballs.jl --llvm-release
 
 buildjl:
