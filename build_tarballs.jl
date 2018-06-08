@@ -28,6 +28,8 @@ sources = [
     "47e493a799dca35bc68ca2ceaeed27c5ca09b12241f87f7220b5f5882194f59c",
     "http://releases.llvm.org/$(llvm_ver)/libunwind-$(llvm_ver).src.tar.xz" =>
     "256c4ed971191bde42208386c8d39e5143fa4afd098e03bd2c140c878c63f1d6",
+    "http://releases.llvm.org/$(llvm_ver)/lld-$(llvm_ver).src.tar.xz" =>
+    "6b8c4a833cf30230c0213d78dbac01af21387b298225de90ab56032ca79c0e0b",
 
     # Include our LLVM patches
     "patches",
@@ -52,6 +54,8 @@ for f in *.src; do
         mv $(pwd)/${f} $(echo llvm-*.src)/tools/clang
     elif [[ ${f} == polly-*.src ]]; then
         mv $(pwd)/${f} $(echo llvm-*.src)/tools/polly
+    elif [[ ${f} == lld-*.src ]]; then
+        mv $(pwd)/${f} $(echo llvm-*.src)/tools/lld
     else
         mv $(pwd)/${f} $(echo llvm-*.src)/projects/${f%-*}
     fi
@@ -252,6 +256,7 @@ mv ${prefix}/bin/clang* ${prefix}/tools/
 mv ${prefix}/bin/scan-* ${prefix}/tools/
 mv ${prefix}/bin/c-index* ${prefix}/tools/
 mv ${prefix}/bin/git-clang* ${prefix}/tools/
+mv ${prefix}/bin/lld* ${prefix}/tools/
 
 # Live is harsh on Windows and dynamic libraries are
 # expected to live alongside the binaries. So we have
