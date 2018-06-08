@@ -1,8 +1,7 @@
 ###
 # LLVMBuilder -- reliable LLVM builds all the time.
 #
-# --llvm-release: Build the release version on all supported platforms
-# --llvm-reldbg: Build the RelWithDebInfo+Asserts version
+# --llvm-asserts: Build the Release+Asserts version
 # --llvm-check: Build a RelWithDebInfo+Asserts version on x86-64-linux-musl
 #               and run the testsuite. This will build for all targets.
 ###
@@ -156,11 +155,18 @@ fi
 # Also target Wasm because Javascript is the Platform Of The Future (TM)
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD:STRING=\"WebAssembly\""
 
-if [[ "${RELDBG}" == "1" ]]; then
-    CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_BUILD_TYPE=RelWithDebInfo"
-    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_ENABLE_ASSERTIONS:BOOL=ON"
-else
+
+if [[ "${CHECK}" == "0" ]]; then
     CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_BUILD_TYPE=Release"
+else
+    # We want a more debugable version
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_BUILD_TYPE=RelWithDebInfo"
+    # make sure that asserts are on as well
+    ASSERTS=1
+fi
+
+if [[ "${ASSERTS}" == "1" ]]; then
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_ENABLE_ASSERTIONS:BOOL=ON"
 fi
 
 # We want a build with no bindings
@@ -304,13 +310,11 @@ dependencies = [
 # Build the tarballs, and possibly a `build.jl` as well.
 config = ""
 name = "LLVM"
-if !("--llvm-release" in llvm_ARGS)
-    config *= "RELDBG=1\n"
-    name *= ".dbg"
-elseif !("--llvm-reldbg" in llvm_ARGS)
-    config *= "RELDBG=0\n"
+if "--llvm-asserts" in llvm_ARGS
+    config *= "ASSERTS=1\n"
+    name *= ".asserts"
 else
-    error("Both --llvm-reldbg, and --llvm-release passed. Choose only one.")
+    config *= "ASSERTS=0\n"
 end
 
 if "--llvm-check" in llvm_ARGS
