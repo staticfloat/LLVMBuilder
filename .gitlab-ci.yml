@@ -4,7 +4,11 @@ build:
         CI_REPO_OWNER: staticfloat
         CI_REPO_NAME: LLVMBuilder
     script:
-        - julia --color=yes build_tarballs.jl
+        # Build tblgen, then reldbg builds, then don't delete tblgen
+        - julia --color=yes build_tarballs.jl --llvm-reldbg --llvm-keep-tblgen
+        # Build release build, then do delete tblgen
+        - julia --color=yes --llvm-release
+
         # On tagged releases, upload our releases to github releases 
         - if [[ -n "${CI_COMMIT_TAG}" ]]; then
               ghr --username ${CI_REPO_OWNER} --repository ${CI_REPO_NAME} --replace ${CI_COMMIT_TAG} products/;
