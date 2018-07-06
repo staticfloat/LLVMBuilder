@@ -34,6 +34,8 @@ sources = [
     "patches",
 ]
 
+llvm_ver = VersionNumber(llvm_ver)
+
 # Since we kind of do this LLVM setup twice, this is the shared setup start:
 script_setup = raw"""
 # We want to exit the program if errors occur.
@@ -116,7 +118,7 @@ if !isfile(tblgen_tarball)
     if "--verbose" in ARGS
         push!(tblgen_ARGS, "--verbose")
     end
-    product_hashes = build_tarballs(tblgen_ARGS, "tblgen", sources, script, platforms, products, dependencies)
+    product_hashes = build_tarballs(tblgen_ARGS, "tblgen", llvm_ver, sources, script, platforms, products, dependencies)
 
     # Extract path information to the built tblgen tarball and its hash
     tblgen_tarball, tblgen_hash = product_hashes["x86_64-linux-musl"]
@@ -326,7 +328,7 @@ else
    config *= "CHECK=0\n"
 end
 
-build_tarballs(ARGS, name, sources, config * script, platforms, products, dependencies)
+build_tarballs(ARGS, name, llvm_ver, sources, config * script, platforms, products, dependencies)
 
 if !("--llvm-keep-tblgen" in llvm_ARGS)
     # Remove tblgen tarball as it's no longer useful, and we don't want to upload them.
