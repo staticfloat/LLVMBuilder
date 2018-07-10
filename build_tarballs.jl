@@ -9,30 +9,32 @@
 using BinaryBuilder
 
 # Collection of sources required to build LLVM
-llvm_ver = "6.0.0"
+llvm_ver = "6.0.1"
 sources = [
     "http://releases.llvm.org/$(llvm_ver)/llvm-$(llvm_ver).src.tar.xz" =>
-    "1ff53c915b4e761ef400b803f07261ade637b0c269d99569f18040f3dcee4408",
+    "b6d6c324f9c71494c0ccaf3dac1f16236d970002b42bb24a6c9e1634f7d0f4e2",
     "http://releases.llvm.org/$(llvm_ver)/cfe-$(llvm_ver).src.tar.xz" =>
-    "e07d6dd8d9ef196cfc8e8bb131cbd6a2ed0b1caf1715f9d05b0f0eeaddb6df32",
+    "7c243f1485bddfdfedada3cd402ff4792ea82362ff91fbdac2dae67c6026b667",
     "http://releases.llvm.org/$(llvm_ver)/compiler-rt-$(llvm_ver).src.tar.xz" =>
-    "d0cc1342cf57e9a8d52f5498da47a3b28d24ac0d39cbc92308781b3ee0cea79a",
+    "f4cd1e15e7d5cb708f9931d4844524e4904867240c306b06a4287b22ac1c99b9",
     #"http://releases.llvm.org/$(llvm_ver)/lldb-$(llvm_ver).src.tar.xz" =>
-    #"46f54c1d7adcd047d87c0179f7b6fa751614f339f4f87e60abceaa45f414d454",
+    #"",
     "http://releases.llvm.org/$(llvm_ver)/libcxx-$(llvm_ver).src.tar.xz" =>
-    "70931a87bde9d358af6cb7869e7535ec6b015f7e6df64def6d2ecdd954040dd9",
+    "7654fbc810a03860e6f01a54c2297a0b9efb04c0b9aa0409251d9bdb3726fc67",
     "http://releases.llvm.org/$(llvm_ver)/libcxxabi-$(llvm_ver).src.tar.xz" =>
-    "91c6d9c5426306ce28d0627d6a4448e7d164d6a3f64b01cb1d196003b16d641b",
+    "209f2ec244a8945c891f722e9eda7c54a5a7048401abd62c62199f3064db385f",
     "http://releases.llvm.org/$(llvm_ver)/polly-$(llvm_ver).src.tar.xz" =>
-    "47e493a799dca35bc68ca2ceaeed27c5ca09b12241f87f7220b5f5882194f59c",
+    "e7765fdf6c8c102b9996dbb46e8b3abc41396032ae2315550610cf5a1ecf4ecc",
     "http://releases.llvm.org/$(llvm_ver)/libunwind-$(llvm_ver).src.tar.xz" =>
-    "256c4ed971191bde42208386c8d39e5143fa4afd098e03bd2c140c878c63f1d6",
+    "a8186c76a16298a0b7b051004d0162032b9b111b857fbd939d71b0930fd91b96",
     "http://releases.llvm.org/$(llvm_ver)/lld-$(llvm_ver).src.tar.xz" =>
-    "6b8c4a833cf30230c0213d78dbac01af21387b298225de90ab56032ca79c0e0b",
+    "e706745806921cea5c45700e13ebe16d834b5e3c0b7ad83bf6da1f28b0634e11",
 
     # Include our LLVM patches
     "patches",
 ]
+
+llvm_ver = VersionNumber(llvm_ver)
 
 # Since we kind of do this LLVM setup twice, this is the shared setup start:
 script_setup = raw"""
@@ -68,6 +70,7 @@ update_configure_scripts
 
 # Apply all our patches
 for f in $WORKSPACE/srcdir/llvm_patches/*.patch; do
+    echo "Applying patch ${f}"
     patch -p1 < ${f}
 done
 """
@@ -116,7 +119,7 @@ if !isfile(tblgen_tarball)
     if "--verbose" in ARGS
         push!(tblgen_ARGS, "--verbose")
     end
-    product_hashes = build_tarballs(tblgen_ARGS, "tblgen", sources, script, platforms, products, dependencies)
+    product_hashes = build_tarballs(tblgen_ARGS, "tblgen", llvm_ver, sources, script, platforms, products, dependencies)
 
     # Extract path information to the built tblgen tarball and its hash
     tblgen_tarball, tblgen_hash = product_hashes["x86_64-linux-musl"]
@@ -326,7 +329,7 @@ else
    config *= "CHECK=0\n"
 end
 
-build_tarballs(ARGS, name, sources, config * script, platforms, products, dependencies)
+build_tarballs(ARGS, name, llvm_ver, sources, config * script, platforms, products, dependencies)
 
 if !("--llvm-keep-tblgen" in llvm_ARGS)
     # Remove tblgen tarball as it's no longer useful, and we don't want to upload them.
