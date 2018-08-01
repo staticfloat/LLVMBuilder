@@ -6,6 +6,9 @@ release:
 asserts:
 	julia build_tarballs.jl --llvm-asserts
 
+quick:
+	julia build_tarballs.jl --llvm-asserts i686-w64-mingw32 x86_64-w64-mingw32 x86_64-apple-darwin14
+
 check:
 	julia build_tarballs.jl --llvm-check --verbose
 
