@@ -66,7 +66,7 @@ done
 cd llvm-*.src
 
 # Update config.guess/config.sub stuff
-update_configure_scripts
+# update_configure_scripts
 
 # Apply all our patches
 for f in $WORKSPACE/srcdir/llvm_patches/*.patch; do
