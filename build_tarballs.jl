@@ -66,7 +66,7 @@ done
 cd llvm-*.src
 
 # Update config.guess/config.sub stuff
-update_configure_scripts
+# update_configure_scripts
 
 # Apply all our patches
 for f in $WORKSPACE/srcdir/llvm_patches/*.patch; do
@@ -216,6 +216,9 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_HOST_TRIPLE=${target}"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBUNWIND_BUILD=OFF"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXX_BUILD=OFF"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOL_LIBCXXABI_BUILD=OFF"
+
+# Patch D50167 broke Polly :(
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_POLLY_BUILD=OFF"
 
 if [[ "${target}" == *apple* ]]; then
     # On OSX, we need to override LLVM's looking around for our SDK
