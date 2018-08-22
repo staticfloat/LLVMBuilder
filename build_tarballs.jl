@@ -158,7 +158,6 @@ fi
 # Also target Wasm because Javascript is the Platform Of The Future (TM)
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD:STRING=\"WebAssembly\""
 
-
 if [[ "${CHECK}" == "0" ]]; then
     CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_BUILD_TYPE=Release"
 else
@@ -196,6 +195,11 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CROSSCOMPILING=True"
 # Julia expects the produced LLVM tools to be installed into tools and not bin
 # We can't simply move bin to tools since on MingW64 it will also contain the shlib.
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOLS_INSTALL_DIR=${prefix}/tools"
+
+# Also build and install utils, since we want FileCheck, and lit
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_UTILS_INSTALL_DIR=${prefix}/tools"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_INCLUDE_UTILS=True -DLLVM_INSTALL_UTILS=True"
+
 
 # Tell LLVM where our pre-built tblgen tools are
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TABLEGEN=${WORKSPACE}/srcdir/bin/llvm-tblgen"
@@ -276,6 +280,9 @@ mv ${prefix}/bin/lld* ${prefix}/tools/
 if [[ "${target}" == *mingw* ]]; then
     cp ${prefix}/bin/*.dll ${prefix}/tools/
 fi
+
+# Lit is a python dependency and there is no proper install target
+cp -r ../utils/lit ${prefix}/tools/
 """
 
 if "--llvm-check" in llvm_ARGS
