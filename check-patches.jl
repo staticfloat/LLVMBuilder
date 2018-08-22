@@ -26,3 +26,10 @@ for patch in patches
     end
 end
 
+patches = map(p->string(p[6:end]), patches)
+
+for patch in readdir(ARGS[1])
+  if startswith(patch, "llvm") && !(patch in patches)
+     warn("$patch not present for LLVMBuilder")
+  end
+end
