@@ -156,7 +156,8 @@ if [[ "${CHECK}" == "0" ]]; then
 fi
 
 # Also target Wasm because Javascript is the Platform Of The Future (TM)
-CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD:STRING=\"WebAssembly\""
+# Actually, turn this off because we need it to work with The Julia Of Today (TM)
+#CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD:STRING=\"WebAssembly\""
 
 if [[ "${CHECK}" == "0" ]]; then
     CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_BUILD_TYPE=Release"
