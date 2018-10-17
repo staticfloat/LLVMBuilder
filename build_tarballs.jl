@@ -214,6 +214,11 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_TOOLCHAIN_FILE=/opt/${target}/${target}.tool
 # `ld -v`, which is hilariously wrong.
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_HOST_TRIPLE=${target}"
 
+# Tell LLVM which compiler target to use, because it loses track for some reason
+CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_C_COMPILER_TARGET=${target}"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_COMPILER_TARGET=${target}"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_ASM_COMPILER_TARGET=${target}"
+
 # For now we focus on building llvm, clang, polly, and compiler-rt.
 # We would like to build libc++, libc++abi and libunwind eventually
 # but we currently don't due to issues on ppc and windows with
@@ -227,11 +232,14 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_POLLY_BUILD=OFF"
 
 if [[ "${target}" == *apple* ]]; then
     # On OSX, we need to override LLVM's looking around for our SDK
-    CMAKE_FLAGS="${CMAKE_FLAGS} -DDARWIN_macosx_CACHED_SYSROOT:STRING=/opt/${target}/MacOSX10.10.sdk"
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DDARWIN_macosx_CACHED_SYSROOT:STRING=/opt/${target}/${target}/sys-root"
 
     # LLVM actually won't build against 10.8, so we bump ourselves up slightly to 10.9
     export MACOSX_DEPLOYMENT_TARGET=10.9
     export LDFLAGS=-mmacosx-version-min=10.9
+
+    # We need to link against libc++ on OSX
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_ENABLE_LIBCXX=ON"
 fi
 
 if [[ "${target}" == *apple* ]] || [[ "${target}" == *freebsd* ]]; then
