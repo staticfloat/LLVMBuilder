@@ -119,6 +119,9 @@ if !isfile(tblgen_tarball)
     if "--verbose" in ARGS
         push!(tblgen_ARGS, "--verbose")
     end
+    if "--debug" in ARGS
+        push!(tblgen_ARGS, "--debug")
+    end
     product_hashes = build_tarballs(tblgen_ARGS, "tblgen", llvm_ver, sources, script, platforms, products, dependencies)
 
     # Extract path information to the built tblgen tarball and its hash
