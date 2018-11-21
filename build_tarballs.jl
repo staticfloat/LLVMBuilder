@@ -286,7 +286,7 @@ mv ${prefix}/bin/c-index* ${prefix}/tools/
 mv ${prefix}/bin/git-clang* ${prefix}/tools/
 mv ${prefix}/bin/lld* ${prefix}/tools/
 
-# Live is harsh on Windows and dynamic libraries are
+# Life is harsh on Windows and dynamic libraries are
 # expected to live alongside the binaries. So we have
 # to copy the *.dll from bin/ to tools/ as well...
 if [[ "${target}" == *mingw* ]]; then
