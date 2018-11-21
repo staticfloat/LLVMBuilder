@@ -127,6 +127,15 @@ if !isfile(tblgen_tarball)
     # Extract path information to the built tblgen tarball and its hash
     tblgen_tarball, tblgen_hash = product_hashes["x86_64-linux-musl"]
     tblgen_tarball = joinpath("products", tblgen_tarball)
+
+    repo = BinaryBuilder.get_repo_name()
+    tag  = BinaryBuilder.get_tag_name()
+    bin_path = "https://github.com/$(repo)/releases/download/$(tag)"
+
+    dummy_products = products(Prefix(pwd()))
+    print_buildjl(pwd(), "tblgen", llvm_ver, dummy_products,
+                  product_hashes, bin_path)
+
 else
     info("Using pre-built tblgen tarball at $(tblgen_tarball)")
     using SHA: sha256
@@ -352,8 +361,3 @@ else
 end
 
 build_tarballs(ARGS, name, llvm_ver, sources, config * script, platforms, products, dependencies)
-
-if !("--llvm-keep-tblgen" in llvm_ARGS)
-    # Remove tblgen tarball as it's no longer useful, and we don't want to upload them.
-    rm(tblgen_tarball; force=true)
-end
