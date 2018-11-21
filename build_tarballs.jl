@@ -293,6 +293,13 @@ if [[ "${target}" == *mingw* ]]; then
     cp ${prefix}/bin/*.dll ${prefix}/tools/
 fi
 
+# Work around llvm-config bug by creating versioned symlink to libLLVM
+# https://github.com/JuliaLang/julia/pull/30033
+if [[ "${target}" == *darwin* ]]; then
+    LLVM_VER=$(basename $(echo ${prefix}/tools/clang-*.*))
+    ln -s libLLVM.dylib ${prefix}/lib/libLLVM-${LLVM_VER##*-}.dylib
+fi
+
 # Lit is a python dependency and there is no proper install target
 cp -r ../utils/lit ${prefix}/tools/
 """
