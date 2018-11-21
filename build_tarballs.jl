@@ -204,6 +204,14 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOLS_INSTALL_DIR=${prefix}/tools"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_UTILS_INSTALL_DIR=${prefix}/tools"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_INCLUDE_UTILS=True -DLLVM_INSTALL_UTILS=True"
 
+# Include perf/oprofile/vtune markers
+if [[ ${target} == *linux* ]]; then
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DUSE_PERF=1"
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DUSE_OPROFILE=1"
+fi
+if [[ ${target} == *linux* ]] || [[ ${target} == *mingw32* ]]; then
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DUSE_INTEL_JITEVENTS=1"
+fi
 
 # Tell LLVM where our pre-built tblgen tools are
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TABLEGEN=${WORKSPACE}/srcdir/bin/llvm-tblgen"
