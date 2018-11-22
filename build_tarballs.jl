@@ -119,6 +119,9 @@ if !isfile(tblgen_tarball)
     if "--verbose" in ARGS
         push!(tblgen_ARGS, "--verbose")
     end
+    if "--debug" in ARGS
+        push!(tblgen_ARGS, "--debug")
+    end
     product_hashes = build_tarballs(tblgen_ARGS, "tblgen", llvm_ver, sources, script, platforms, products, dependencies)
 
     # Extract path information to the built tblgen tarball and its hash
@@ -156,7 +159,8 @@ if [[ "${CHECK}" == "0" ]]; then
 fi
 
 # Also target Wasm because Javascript is the Platform Of The Future (TM)
-CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD:STRING=\"WebAssembly\""
+# Actually, turn this off because we need it to work with The Julia Of Today (TM)
+#CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD:STRING=\"WebAssembly\""
 
 if [[ "${CHECK}" == "0" ]]; then
     CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_BUILD_TYPE=Release"
@@ -213,6 +217,11 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_TOOLCHAIN_FILE=/opt/${target}/${target}.tool
 # `ld -v`, which is hilariously wrong.
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_HOST_TRIPLE=${target}"
 
+# Tell LLVM which compiler target to use, because it loses track for some reason
+CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_C_COMPILER_TARGET=${target}"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_CXX_COMPILER_TARGET=${target}"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_ASM_COMPILER_TARGET=${target}"
+
 # For now we focus on building llvm, clang, polly, and compiler-rt.
 # We would like to build libc++, libc++abi and libunwind eventually
 # but we currently don't due to issues on ppc and windows with
@@ -226,11 +235,14 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_POLLY_BUILD=OFF"
 
 if [[ "${target}" == *apple* ]]; then
     # On OSX, we need to override LLVM's looking around for our SDK
-    CMAKE_FLAGS="${CMAKE_FLAGS} -DDARWIN_macosx_CACHED_SYSROOT:STRING=/opt/${target}/MacOSX10.10.sdk"
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DDARWIN_macosx_CACHED_SYSROOT:STRING=/opt/${target}/${target}/sys-root"
 
     # LLVM actually won't build against 10.8, so we bump ourselves up slightly to 10.9
     export MACOSX_DEPLOYMENT_TARGET=10.9
     export LDFLAGS=-mmacosx-version-min=10.9
+
+    # We need to link against libc++ on OSX
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_ENABLE_LIBCXX=ON"
 fi
 
 if [[ "${target}" == *apple* ]] || [[ "${target}" == *freebsd* ]]; then
@@ -297,6 +309,7 @@ else
     platforms = [
         BinaryProvider.Linux(:i686, :glibc),
         BinaryProvider.Linux(:x86_64, :glibc),
+        BinaryProvider.Linux(:x86_64, :musl),
         BinaryProvider.Linux(:aarch64, :glibc),
         BinaryProvider.Linux(:armv7l, :glibc),
         BinaryProvider.Linux(:powerpc64le, :glibc),
@@ -313,6 +326,8 @@ products(prefix) = [
     LibraryProduct(prefix, "libLTO",   :libLTO)
     LibraryProduct(prefix, "libclang", :libclang)
     # tools
+    ExecutableProduct(prefix, "llvm-tblgen", :llvm_tblgen)
+    ExecutableProduct(prefix, "clang-tblgen", :clang_tblgen)
     ExecutableProduct(prefix, "llvm-config", :llvm_config)
 ]
 
