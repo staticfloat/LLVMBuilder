@@ -310,6 +310,11 @@ fi
 
 # Lit is a python dependency and there is no proper install target
 cp -r ../utils/lit ${prefix}/tools/
+
+# Lots of tools don't respect `$DSYMUTIL` and so thus do not find 
+# our cleverly-named `llvm-dsymutil`.  We create a symlink to help
+# Those poor fools along:
+ln -s llvm-dsymutil ${prefix}/tools/dsymutil
 """
 
 if "--llvm-check" in llvm_ARGS
