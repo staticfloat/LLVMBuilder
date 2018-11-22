@@ -309,6 +309,7 @@ else
     platforms = [
         BinaryProvider.Linux(:i686, :glibc),
         BinaryProvider.Linux(:x86_64, :glibc),
+        BinaryProvider.Linux(:x86_64, :musl),
         BinaryProvider.Linux(:aarch64, :glibc),
         BinaryProvider.Linux(:armv7l, :glibc),
         BinaryProvider.Linux(:powerpc64le, :glibc),
@@ -325,6 +326,8 @@ products(prefix) = [
     LibraryProduct(prefix, "libLTO",   :libLTO)
     LibraryProduct(prefix, "libclang", :libclang)
     # tools
+    ExecutableProduct(prefix, "llvm-tblgen", :llvm_tblgen)
+    ExecutableProduct(prefix, "clang-tblgen", :clang_tblgen)
     ExecutableProduct(prefix, "llvm-config", :llvm_config)
 ]
 
