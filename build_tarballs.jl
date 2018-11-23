@@ -204,6 +204,14 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TOOLS_INSTALL_DIR=${prefix}/tools"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_UTILS_INSTALL_DIR=${prefix}/tools"
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_INCLUDE_UTILS=True -DLLVM_INSTALL_UTILS=True"
 
+# Include perf/oprofile/vtune markers
+if [[ ${target} == *linux* ]]; then
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DUSE_PERF=1"
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DUSE_OPROFILE=1"
+fi
+if [[ ${target} == *linux* ]] || [[ ${target} == *mingw32* ]]; then
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DUSE_INTEL_JITEVENTS=1"
+fi
 
 # Tell LLVM where our pre-built tblgen tools are
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TABLEGEN=${WORKSPACE}/srcdir/bin/llvm-tblgen"
@@ -286,15 +294,27 @@ mv ${prefix}/bin/c-index* ${prefix}/tools/
 mv ${prefix}/bin/git-clang* ${prefix}/tools/
 mv ${prefix}/bin/lld* ${prefix}/tools/
 
-# Live is harsh on Windows and dynamic libraries are
+# Life is harsh on Windows and dynamic libraries are
 # expected to live alongside the binaries. So we have
 # to copy the *.dll from bin/ to tools/ as well...
 if [[ "${target}" == *mingw* ]]; then
     cp ${prefix}/bin/*.dll ${prefix}/tools/
 fi
 
+# Work around llvm-config bug by creating versioned symlink to libLLVM
+# https://github.com/JuliaLang/julia/pull/30033
+if [[ "${target}" == *darwin* ]]; then
+    LLVM_VER=$(basename $(echo ${prefix}/tools/clang-*.*))
+    ln -s libLLVM.dylib ${prefix}/lib/libLLVM-${LLVM_VER##*-}.dylib
+fi
+
 # Lit is a python dependency and there is no proper install target
 cp -r ../utils/lit ${prefix}/tools/
+
+# Lots of tools don't respect `$DSYMUTIL` and so thus do not find 
+# our cleverly-named `llvm-dsymutil`.  We create a symlink to help
+# Those poor fools along:
+ln -s llvm-dsymutil ${prefix}/tools/dsymutil
 """
 
 if "--llvm-check" in llvm_ARGS
@@ -317,6 +337,7 @@ else
         BinaryProvider.Windows(:i686),
         BinaryProvider.Windows(:x86_64)
     ]
+    platforms = expand_gcc_versions(platforms)
 end
 
 # The products that we will ensure are always built
