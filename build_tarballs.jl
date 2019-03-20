@@ -335,7 +335,8 @@ else
         BinaryProvider.Linux(:powerpc64le, :glibc),
         BinaryProvider.MacOS(),
         BinaryProvider.Windows(:i686),
-        BinaryProvider.Windows(:x86_64)
+        BinaryProvider.Windows(:x86_64),
+        BinaryProvider.FreeBSD(:x86_64),
     ]
     platforms = expand_gcc_versions(platforms)
 end
