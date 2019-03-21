@@ -274,6 +274,11 @@ if [[ "${target}" == *musl* ]]; then
     CMAKE_FLAGS="${CMAKE_FLAGS} -DCOMPILER_RT_BUILD_XRAY=OFF"
 fi
 
+if [[ "${target}" == *freebsd* ]]; then
+    # On FreeBSD, we must force even statically-linked code to have -fPIC
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_POSITION_INDEPENDENT_CODE=TRUE"
+fi
+
 # Build!
 cmake .. ${CMAKE_FLAGS} -DCMAKE_C_FLAGS="${CMAKE_CPP_FLAGS} ${CMAKE_C_FLAGS}" -DCMAKE_CXX_FLAGS="${CMAKE_CPP_FLAGS} ${CMAKE_CXX_FLAGS}"
 cmake -LA || true
