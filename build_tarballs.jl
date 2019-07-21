@@ -368,7 +368,7 @@ name = "LLVM"
 if "--llvm-asserts" in llvm_ARGS
     config *= "ASSERTS=1\n"
     name *= ".asserts"
-    warn("Removing PPC64LE from the platform list")
+    @warn("Removing PPC64LE from the platform list")
     filter!(p-> p.arch != :powerpc64le, platforms)
 else
     config *= "ASSERTS=0\n"
