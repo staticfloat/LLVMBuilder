@@ -22,14 +22,14 @@ for patch in patches
     try
         run(`diff $orig $file`)
     catch
-      warn("$patch differs")
+        @warn("$patch differs")
     end
 end
 
 patches = map(p->string(p[6:end]), patches)
 
 for patch in readdir(ARGS[1])
-  if startswith(patch, "llvm") && !(patch in patches)
-     warn("$patch not present for LLVMBuilder")
-  end
+    if startswith(patch, "llvm") && !(patch in patches)
+        warn("$patch not present for LLVMBuilder")
+    end
 end

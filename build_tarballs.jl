@@ -9,26 +9,26 @@
 using BinaryBuilder
 
 # Collection of sources required to build LLVM
-llvm_ver = "6.0.1"
+llvm_ver = "8.0.0"
 sources = [
     "http://releases.llvm.org/$(llvm_ver)/llvm-$(llvm_ver).src.tar.xz" =>
-    "b6d6c324f9c71494c0ccaf3dac1f16236d970002b42bb24a6c9e1634f7d0f4e2",
+    "8872be1b12c61450cacc82b3d153eab02be2546ef34fa3580ed14137bb26224c",
     "http://releases.llvm.org/$(llvm_ver)/cfe-$(llvm_ver).src.tar.xz" =>
-    "7c243f1485bddfdfedada3cd402ff4792ea82362ff91fbdac2dae67c6026b667",
+    "084c115aab0084e63b23eee8c233abb6739c399e29966eaeccfc6e088e0b736b",
     "http://releases.llvm.org/$(llvm_ver)/compiler-rt-$(llvm_ver).src.tar.xz" =>
-    "f4cd1e15e7d5cb708f9931d4844524e4904867240c306b06a4287b22ac1c99b9",
+    "b435c7474f459e71b2831f1a4e3f1d21203cb9c0172e94e9d9b69f50354f21b1",
     #"http://releases.llvm.org/$(llvm_ver)/lldb-$(llvm_ver).src.tar.xz" =>
     #"",
-    "http://releases.llvm.org/$(llvm_ver)/libcxx-$(llvm_ver).src.tar.xz" =>
-    "7654fbc810a03860e6f01a54c2297a0b9efb04c0b9aa0409251d9bdb3726fc67",
-    "http://releases.llvm.org/$(llvm_ver)/libcxxabi-$(llvm_ver).src.tar.xz" =>
-    "209f2ec244a8945c891f722e9eda7c54a5a7048401abd62c62199f3064db385f",
+    #"http://releases.llvm.org/$(llvm_ver)/libcxx-$(llvm_ver).src.tar.xz" =>
+    #"c2902675e7c84324fb2c1e45489220f250ede016cc3117186785d9dc291f9de2",
+    #"http://releases.llvm.org/$(llvm_ver)/libcxxabi-$(llvm_ver).src.tar.xz" =>
+    #"c2d6de9629f7c072ac20ada776374e9e3168142f20a46cdb9d6df973922b07cd",
     "http://releases.llvm.org/$(llvm_ver)/polly-$(llvm_ver).src.tar.xz" =>
-    "e7765fdf6c8c102b9996dbb46e8b3abc41396032ae2315550610cf5a1ecf4ecc",
+    "e3f5a3d6794ef8233af302c45ceb464b74cdc369c1ac735b6b381b21e4d89df4",
     "http://releases.llvm.org/$(llvm_ver)/libunwind-$(llvm_ver).src.tar.xz" =>
-    "a8186c76a16298a0b7b051004d0162032b9b111b857fbd939d71b0930fd91b96",
+    "ff243a669c9cef2e2537e4f697d6fb47764ea91949016f2d643cb5d8286df660",
     "http://releases.llvm.org/$(llvm_ver)/lld-$(llvm_ver).src.tar.xz" =>
-    "e706745806921cea5c45700e13ebe16d834b5e3c0b7ad83bf6da1f28b0634e11",
+    "9caec8ec922e32ffa130f0fb08e4c5a242d7e68ce757631e425e9eba2e1a6e37",
 
     # Include our LLVM patches
     "patches",
@@ -81,7 +81,7 @@ done
 script = script_setup * raw"""
 # Build llvm-tblgen, clang-tblgen, and llvm-config
 mkdir build && cd build
-CMAKE_FLAGS="-DLLVM_TARGETS_TO_BUILD:STRING=host"
+CMAKE_FLAGS="-DLLVM_TARGETS_TO_BUILD:STRING=host -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN:BOOL=ON"
 cmake .. ${CMAKE_FLAGS}
 make -j${nproc} llvm-tblgen clang-tblgen llvm-config
 
@@ -128,7 +128,7 @@ if !isfile(tblgen_tarball)
     tblgen_tarball, tblgen_hash = product_hashes["x86_64-linux-musl"]
     tblgen_tarball = joinpath("products", tblgen_tarball)
 else
-    info("Using pre-built tblgen tarball at $(tblgen_tarball)")
+    @info("Using pre-built tblgen tarball at $(tblgen_tarball)")
     using SHA: sha256
     tblgen_hash = open(tblgen_tarball) do f
         bytes2hex(sha256(f))
@@ -157,6 +157,9 @@ if [[ "${CHECK}" == "0" ]]; then
     # Start the cmake flags off with building for both our host arch, NVidia and AMD
     CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TARGETS_TO_BUILD:STRING=\"host\;NVPTX\;AMDGPU\""
 fi
+
+# Allow us to build with GCC 4.X for at least a little while longer
+CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN:BOOL=ON"
 
 # Also target Wasm because Javascript is the Platform Of The Future (TM)
 # Actually, turn this off because we need it to work with The Julia Of Today (TM)
@@ -319,12 +322,12 @@ cp -r ../utils/lit ${prefix}/tools/
 # Lots of tools don't respect `$DSYMUTIL` and so thus do not find 
 # our cleverly-named `llvm-dsymutil`.  We create a symlink to help
 # Those poor fools along:
-ln -s llvm-dsymutil ${prefix}/tools/dsymutil
+#ln -s llvm-dsymutil ${prefix}/tools/dsymutil
 """
 
 if "--llvm-check" in llvm_ARGS
    # BB is using musl as a platform and we don't want to run glibc binaries on it.
-   info("Restricting build to `x86_64-linux-musl`")
+   @info("Restricting build to `x86_64-linux-musl`")
    platforms = [
         BinaryProvider.Linux(:x86_64, :musl)
    ]
