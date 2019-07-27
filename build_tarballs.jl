@@ -9,26 +9,20 @@
 using BinaryBuilder
 
 # Collection of sources required to build LLVM
-llvm_ver = "8.0.0"
+llvm_ver = "8.0.1"
 sources = [
-    "http://releases.llvm.org/$(llvm_ver)/llvm-$(llvm_ver).src.tar.xz" =>
-    "8872be1b12c61450cacc82b3d153eab02be2546ef34fa3580ed14137bb26224c",
-    "http://releases.llvm.org/$(llvm_ver)/cfe-$(llvm_ver).src.tar.xz" =>
-    "084c115aab0084e63b23eee8c233abb6739c399e29966eaeccfc6e088e0b736b",
-    "http://releases.llvm.org/$(llvm_ver)/compiler-rt-$(llvm_ver).src.tar.xz" =>
-    "b435c7474f459e71b2831f1a4e3f1d21203cb9c0172e94e9d9b69f50354f21b1",
-    #"http://releases.llvm.org/$(llvm_ver)/lldb-$(llvm_ver).src.tar.xz" =>
-    #"",
-    #"http://releases.llvm.org/$(llvm_ver)/libcxx-$(llvm_ver).src.tar.xz" =>
-    #"c2902675e7c84324fb2c1e45489220f250ede016cc3117186785d9dc291f9de2",
-    #"http://releases.llvm.org/$(llvm_ver)/libcxxabi-$(llvm_ver).src.tar.xz" =>
-    #"c2d6de9629f7c072ac20ada776374e9e3168142f20a46cdb9d6df973922b07cd",
-    "http://releases.llvm.org/$(llvm_ver)/polly-$(llvm_ver).src.tar.xz" =>
-    "e3f5a3d6794ef8233af302c45ceb464b74cdc369c1ac735b6b381b21e4d89df4",
-    "http://releases.llvm.org/$(llvm_ver)/libunwind-$(llvm_ver).src.tar.xz" =>
-    "ff243a669c9cef2e2537e4f697d6fb47764ea91949016f2d643cb5d8286df660",
-    "http://releases.llvm.org/$(llvm_ver)/lld-$(llvm_ver).src.tar.xz" =>
-    "9caec8ec922e32ffa130f0fb08e4c5a242d7e68ce757631e425e9eba2e1a6e37",
+    "https://github.com/llvm/llvm-project/releases/download/llvmorg-$(llvm_ver)/llvm-$(llvm_ver).src.tar.xz" =>
+    "44787a6d02f7140f145e2250d56c9f849334e11f9ae379827510ed72f12b75e7",
+    "https://github.com/llvm/llvm-project/releases/download/llvmorg-$(llvm_ver)/cfe-$(llvm_ver).src.tar.xz" =>
+    "70effd69f7a8ab249f66b0a68aba8b08af52aa2ab710dfb8a0fba102685b1646",
+    "https://github.com/llvm/llvm-project/releases/download/llvmorg-$(llvm_ver)/compiler-rt-$(llvm_ver).src.tar.xz" =>
+    "11828fb4823387d820c6715b25f6b2405e60837d12a7469e7a8882911c721837",
+    "https://github.com/llvm/llvm-project/releases/download/llvmorg-$(llvm_ver)/polly-$(llvm_ver).src.tar.xz" =>
+    "e8a1f7e8af238b32ce39ab5de1f3317a2e3f7d71a8b1b8bbacbd481ac76fd2d1",
+    "https://github.com/llvm/llvm-project/releases/download/llvmorg-$(llvm_ver)/libunwind-$(llvm_ver).src.tar.xz" =>
+    "1870161dda3172c63e632c1f60624564e1eb0f9233cfa8f040748ca5ff630f6e",
+    "https://github.com/llvm/llvm-project/releases/download/llvmorg-$(llvm_ver)/lld-$(llvm_ver).src.tar.xz" =>
+    "9fba1e94249bd7913e8a6c3aadcb308b76c8c3d83c5ce36c99c3f34d73873d88",
 
     # Include our LLVM patches
     "patches",
@@ -259,6 +253,9 @@ fi
 if [[ "${target}" == *apple* ]] || [[ "${target}" == *freebsd* ]]; then
     # On clang-based platforms we need to override the check for ffs because it doesn't work with `clang`.
     export ac_cv_have_decl___builtin_ffs=yes
+
+    # We don't use X-ray on BSD systems
+    CMAKE_FLAGS="${CMAKE_FLAGS} -DCOMPILER_RT_BUILD_XRAY=OFF"
 fi
 
 if [[ "${target}" == *mingw* ]]; then
