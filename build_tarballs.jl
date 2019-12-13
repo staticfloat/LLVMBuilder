@@ -352,10 +352,6 @@ products = [
     LibraryProduct("libLLVM",  :libLLVM)
     LibraryProduct("libLTO",   :libLTO)
     LibraryProduct("libclang", :libclang)
-    # tools
-    ExecutableProduct("llvm-tblgen", :llvm_tblgen)
-    ExecutableProduct("clang-tblgen", :clang_tblgen)
-    ExecutableProduct("llvm-config", :llvm_config)
 ]
 
 # Dependencies that must be installed before this package can be built
