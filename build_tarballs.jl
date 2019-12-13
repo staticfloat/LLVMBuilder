@@ -88,14 +88,14 @@ mv bin/llvm-config $prefix/bin/
 
 # We'll do this build for x86_64-linux-musl only, as that's the arch we're building on
 platforms = [
-    Linux(:x86_64, :musl),
+    Linux(:x86_64, libc = :musl),
 ]
 
 # We only care about llvm-tblgen and clang-tblgen
-products(prefix) = [
-    ExecutableProduct(prefix, "llvm-tblgen", :llvm_tblgen)
-    ExecutableProduct(prefix, "clang-tblgen", :clang_tblgen)
-    ExecutableProduct(prefix, "llvm-config", :llvm_config)
+products = [
+    ExecutableProduct("llvm-tblgen", :llvm_tblgen)
+    ExecutableProduct("clang-tblgen", :clang_tblgen)
+    ExecutableProduct("llvm-config", :llvm_config)
 ]
 
 # Dependencies that must be installed before this package can be built
@@ -119,7 +119,7 @@ if !isfile(tblgen_tarball)
     product_hashes = build_tarballs(tblgen_ARGS, "tblgen", llvm_ver, sources, script, platforms, products, dependencies)
 
     # Extract path information to the built tblgen tarball and its hash
-    tblgen_tarball, tblgen_hash = product_hashes["x86_64-linux-musl"]
+    tblgen_tarball, tblgen_hash = product_hashes[first(platforms)]
     tblgen_tarball = joinpath("products", tblgen_tarball)
 else
     @info("Using pre-built tblgen tarball at $(tblgen_tarball)")
@@ -216,7 +216,7 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DCLANG_TABLEGEN=${WORKSPACE}/srcdir/bin/clang-tblge
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_CONFIG_PATH=${WORKSPACE}/srcdir/bin/llvm-config"
 
 # Explicitly use our cmake toolchain file
-CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_TOOLCHAIN_FILE=/opt/${target}/${target}.toolchain"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_TOOLCHAIN_FILE=/opt/${target}/${target}.cmake"
 
 # Manually set the host triplet, as otherwise on some platforms it tries to guess using
 # `ld -v`, which is hilariously wrong.
@@ -326,36 +326,36 @@ if "--llvm-check" in llvm_ARGS
    # BB is using musl as a platform and we don't want to run glibc binaries on it.
    @info("Restricting build to `x86_64-linux-musl`")
    platforms = [
-        BinaryProvider.Linux(:x86_64, :musl)
+        Linux(:x86_64, libc=:musl)
    ]
 else
     # These are the platforms we will build for by default, unless further
     # platforms are passed in on the command line
     platforms = [
-        BinaryProvider.Linux(:i686, :glibc),
-        BinaryProvider.Linux(:x86_64, :glibc),
-        BinaryProvider.Linux(:x86_64, :musl),
-        BinaryProvider.Linux(:aarch64, :glibc),
-        BinaryProvider.Linux(:armv7l, :glibc),
-        BinaryProvider.Linux(:powerpc64le, :glibc),
-        BinaryProvider.MacOS(),
-        BinaryProvider.Windows(:i686),
-        BinaryProvider.Windows(:x86_64),
-        BinaryProvider.FreeBSD(:x86_64),
+        Linux(:i686,    libc = :glibc),
+        Linux(:x86_64,  libc = :glibc),
+        Linux(:x86_64,  libc = :musl),
+        Linux(:aarch64, libc = :glibc),
+        Linux(:armv7l,  libc = :glibc),
+        Linux(:powerpc64le, libc = :glibc),
+        MacOS(),
+        Windows(:i686),
+        Windows(:x86_64),
+        FreeBSD(:x86_64),
     ]
-    platforms = expand_gcc_versions(platforms)
+    platforms = expand_cxxstring_abis(platforms)
 end
 
 # The products that we will ensure are always built
-products(prefix) = [
+products = [
     # libraries
-    LibraryProduct(prefix, "libLLVM",  :libLLVM)
-    LibraryProduct(prefix, "libLTO",   :libLTO)
-    LibraryProduct(prefix, "libclang", :libclang)
+    LibraryProduct("libLLVM",  :libLLVM)
+    LibraryProduct("libLTO",   :libLTO)
+    LibraryProduct("libclang", :libclang)
     # tools
-    ExecutableProduct(prefix, "llvm-tblgen", :llvm_tblgen)
-    ExecutableProduct(prefix, "clang-tblgen", :clang_tblgen)
-    ExecutableProduct(prefix, "llvm-config", :llvm_config)
+    ExecutableProduct("llvm-tblgen", :llvm_tblgen)
+    ExecutableProduct("clang-tblgen", :clang_tblgen)
+    ExecutableProduct("llvm-config", :llvm_config)
 ]
 
 # Dependencies that must be installed before this package can be built
