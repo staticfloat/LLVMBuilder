@@ -377,7 +377,7 @@ else
    config *= "CHECK=0\n"
 end
 
-build_tarballs(ARGS, name, llvm_ver, sources, config * script, platforms, products, dependencies)
+build_tarballs(ARGS, name, llvm_ver, sources, config * script, platforms, products, dependencies, preferred_gcc_version=v"7")
 
 if !("--llvm-keep-tblgen" in llvm_ARGS)
     # Remove tblgen tarball as it's no longer useful, and we don't want to upload them.
