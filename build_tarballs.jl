@@ -36,6 +36,7 @@ script_setup = raw"""
 set -o errexit
 
 cd $WORKSPACE/srcdir/
+nproc=20
 
 # First, move our other projects into llvm/projects
 for f in *.src; do
@@ -88,14 +89,14 @@ mv bin/llvm-config $prefix/bin/
 
 # We'll do this build for x86_64-linux-musl only, as that's the arch we're building on
 platforms = [
-    Linux(:x86_64, libc = :musl),
+    Linux(:x86_64, :musl),
 ]
 
 # We only care about llvm-tblgen and clang-tblgen
-products = [
-    ExecutableProduct("llvm-tblgen", :llvm_tblgen)
-    ExecutableProduct("clang-tblgen", :clang_tblgen)
-    ExecutableProduct("llvm-config", :llvm_config)
+products(prefix) = [
+    ExecutableProduct(prefix, "llvm-tblgen", :llvm_tblgen)
+    ExecutableProduct(prefix, "clang-tblgen", :clang_tblgen)
+    ExecutableProduct(prefix, "llvm-config", :llvm_config)
 ]
 
 # Dependencies that must be installed before this package can be built
@@ -119,7 +120,7 @@ if !isfile(tblgen_tarball)
     product_hashes = build_tarballs(tblgen_ARGS, "tblgen", llvm_ver, sources, script, platforms, products, dependencies)
 
     # Extract path information to the built tblgen tarball and its hash
-    tblgen_tarball, tblgen_hash = product_hashes[first(platforms)]
+    tblgen_tarball, tblgen_hash = product_hashes["x86_64-linux-musl"]
     tblgen_tarball = joinpath("products", tblgen_tarball)
 else
     @info("Using pre-built tblgen tarball at $(tblgen_tarball)")
@@ -216,7 +217,7 @@ CMAKE_FLAGS="${CMAKE_FLAGS} -DCLANG_TABLEGEN=${WORKSPACE}/srcdir/bin/clang-tblge
 CMAKE_FLAGS="${CMAKE_FLAGS} -DLLVM_CONFIG_PATH=${WORKSPACE}/srcdir/bin/llvm-config"
 
 # Explicitly use our cmake toolchain file
-CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_TOOLCHAIN_FILE=/opt/${target}/${target}.cmake"
+CMAKE_FLAGS="${CMAKE_FLAGS} -DCMAKE_TOOLCHAIN_FILE=/opt/${target}/${target}.toolchain"
 
 # Manually set the host triplet, as otherwise on some platforms it tries to guess using
 # `ld -v`, which is hilariously wrong.
@@ -326,32 +327,36 @@ if "--llvm-check" in llvm_ARGS
    # BB is using musl as a platform and we don't want to run glibc binaries on it.
    @info("Restricting build to `x86_64-linux-musl`")
    platforms = [
-        Linux(:x86_64, libc=:musl)
+        BinaryProvider.Linux(:x86_64, :musl)
    ]
 else
     # These are the platforms we will build for by default, unless further
     # platforms are passed in on the command line
     platforms = [
-        Linux(:i686,    libc = :glibc),
-        Linux(:x86_64,  libc = :glibc),
-        Linux(:x86_64,  libc = :musl),
-        Linux(:aarch64, libc = :glibc),
-        Linux(:armv7l,  libc = :glibc),
-        Linux(:powerpc64le, libc = :glibc),
-        MacOS(),
-        Windows(:i686),
-        Windows(:x86_64),
-        FreeBSD(:x86_64),
+        BinaryProvider.Linux(:i686, :glibc),
+        BinaryProvider.Linux(:x86_64, :glibc),
+        BinaryProvider.Linux(:x86_64, :musl),
+        BinaryProvider.Linux(:aarch64, :glibc),
+        BinaryProvider.Linux(:armv7l, :glibc),
+        BinaryProvider.Linux(:powerpc64le, :glibc),
+        BinaryProvider.MacOS(),
+        BinaryProvider.Windows(:i686),
+        BinaryProvider.Windows(:x86_64),
+        BinaryProvider.FreeBSD(:x86_64),
     ]
-    platforms = expand_cxxstring_abis(platforms)
+    platforms = expand_gcc_versions(platforms)
 end
 
 # The products that we will ensure are always built
-products = [
+products(prefix) = [
     # libraries
-    LibraryProduct("libLLVM",  :libLLVM, dont_dlopen=true)
-    LibraryProduct("libLTO",   :libLTO, dont_dlopen=true)
-    LibraryProduct("libclang", :libclang, dont_dlopen=true)
+    LibraryProduct(prefix, "libLLVM",  :libLLVM)
+    LibraryProduct(prefix, "libLTO",   :libLTO)
+    LibraryProduct(prefix, "libclang", :libclang)
+    # tools
+    ExecutableProduct(prefix, "llvm-tblgen", :llvm_tblgen)
+    ExecutableProduct(prefix, "clang-tblgen", :clang_tblgen)
+    ExecutableProduct(prefix, "llvm-config", :llvm_config)
 ]
 
 # Dependencies that must be installed before this package can be built
@@ -364,8 +369,8 @@ name = "LLVM"
 if "--llvm-asserts" in llvm_ARGS
     config *= "ASSERTS=1\n"
     name *= ".asserts"
-    @warn("Removing PPC64LE from the platform list")
-    filter!(p-> p.arch != :powerpc64le, platforms)
+    # @warn("Removing PPC64LE from the platform list")
+    # filter!(p-> p.arch != :powerpc64le, platforms)
 else
     config *= "ASSERTS=0\n"
 end
@@ -377,8 +382,7 @@ else
    config *= "CHECK=0\n"
 end
 
-build_tarballs(ARGS, name, llvm_ver, sources, config * script, platforms, products, dependencies,
-               preferred_gcc_version=v"7", preferred_clang_version=v"7")
+build_tarballs(ARGS, name, llvm_ver, sources, config * script, platforms, products, dependencies)
 
 if !("--llvm-keep-tblgen" in llvm_ARGS)
     # Remove tblgen tarball as it's no longer useful, and we don't want to upload them.
