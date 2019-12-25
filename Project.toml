@@ -2,5 +2,5 @@
 BinaryBuilder = "12aac903-9f7c-5d81-afc2-d9565ea332ae"
 
 [compat]
-BinaryBuilder = "0.2"
+BinaryBuilder = "0.1"
 julia = "1.2"
