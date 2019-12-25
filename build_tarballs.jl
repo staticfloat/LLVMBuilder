@@ -349,9 +349,9 @@ end
 # The products that we will ensure are always built
 products = [
     # libraries
-    LibraryProduct("libLLVM",  :libLLVM)
-    LibraryProduct("libLTO",   :libLTO)
-    LibraryProduct("libclang", :libclang)
+    LibraryProduct("libLLVM",  :libLLVM, dont_dlopen=true)
+    LibraryProduct("libLTO",   :libLTO, dont_dlopen=true)
+    LibraryProduct("libclang", :libclang, dont_dlopen=true)
 ]
 
 # Dependencies that must be installed before this package can be built
